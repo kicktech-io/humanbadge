@@ -113,4 +113,4 @@ Align the full DPA with:
 
 ---
 
-© KickTech. Draft for internal and legal-counsel use during pre-engagement preparation.
+© KickTech. Outline document — to be expanded into a full Data Processing Agreement at the first Premium / KTOOR engagement, against the specific commercial relationship.
