@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Whitelist-based inventory check
         shell: bash
@@ -39,9 +39,9 @@ jobs:
 
           # Allowed paths (POSIX extended regex, anchored implicit).
           # Top-level docs, the docs/ directory, the dist/ directory,
-          # the verify-dist.mjs validator, the .github/ workflows,
-          # the .gitignore. Anything else is forbidden.
-          allowed='^(LICENSE|PRIVACY\.md|SECURITY\.md|README\.md|CONTRIBUTING\.md|\.gitignore|verify-dist\.mjs|\.github/.*|docs/.*|dist/.*)$'
+          # the audit-references/ directory, the verify-dist.mjs validator,
+          # the .github/ workflows, the .gitignore. Anything else is forbidden.
+          allowed='^(LICENSE|PRIVACY\.md|SECURITY\.md|README\.md|CONTRIBUTING\.md|\.gitignore|verify-dist\.mjs|\.github/.*|docs/.*|dist/.*|audit-references/.*)$'
 
           forbidden=$(git ls-files | grep -vE "$allowed" || true)
           if [ -n "$forbidden" ]; then
@@ -95,6 +95,8 @@ jobs:
             "dist/tokens.js"
             "dist/utils.js"
             "dist/overlay.css"
+            "audit-references/README.md"
+            "audit-references/backend/hmac.ts"
           )
           missing=()
           for f in "${required[@]}"; do
@@ -115,7 +117,7 @@ jobs:
     needs: scope-check
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
         uses: actions/setup-node@v4
