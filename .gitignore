@@ -1,0 +1,88 @@
+# ─────────────────────────────────────────────────────────────────────────
+# KickTech HumanBadge — public repo .gitignore
+# ─────────────────────────────────────────────────────────────────────────
+# This is the PUBLIC mirror of the HumanBadge extension. The public repo
+# is a curated subset of the private development repo. The patterns below
+# are defensive guards: most should never appear here, but if they did,
+# we want git to refuse to track them. The complement to this file is
+# the publish-scope CI workflow in .github/workflows/publish-scope.yml,
+# which actively rejects pushes containing disallowed paths.
+# ─────────────────────────────────────────────────────────────────────────
+
+# ── OS metadata ──────────────────────────────────────────────────────────
+__MACOSX/
+._*
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ── Editor / IDE ─────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+*#
+.*.un~
+.netrwhist
+*.sublime-project
+*.sublime-workspace
+
+# ── Source & build infra that belongs to the private repo only ──────────
+# These should NEVER be in the public repo. The CI workflow rejects
+# pushes that introduce them; this is a second line of defense.
+src/
+scripts/
+.dev/
+.private/
+*.local
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Secrets / credentials (none should exist here, defensive) ──────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+.secrets/
+
+# ── Temporary / backup / build artifacts ───────────────────────────────
+*.bak
+*.tmp
+*.orig
+*.rej
+*.log
+.cache/
+build/
+out/
+tmp/
+temp/
+
+# ── Coverage / test output ─────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+
+# ── Override global .gitignore — dist/ IS our published artifact ───────
+# Some developers have `dist/` in ~/.gitignore_global because for most
+# projects dist/ is build output. In this public-mirror repository, dist/
+# is the primary published artifact — every file in dist/ MUST be tracked.
+!dist/
+!dist/**

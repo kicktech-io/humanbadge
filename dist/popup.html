@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <title>Human Badge by KickTech</title>
+  <style>
+    /* Self-hosted fonts (no external request). Space Mono & DM Sans are
+       licensed under the SIL Open Font License 1.1 — see fonts/OFL.txt.
+       WOFF2 files live in fonts/ and are bundled into dist/ by build-store.sh. */
+    @font-face {
+      font-family: 'Space Mono'; font-style: normal; font-weight: 400;
+      font-display: swap; src: url('fonts/SpaceMono-Regular.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Space Mono'; font-style: normal; font-weight: 700;
+      font-display: swap; src: url('fonts/SpaceMono-Bold.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans'; font-style: normal; font-weight: 400;
+      font-display: swap; src: url('fonts/DMSans-Regular.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans'; font-style: normal; font-weight: 500;
+      font-display: swap; src: url('fonts/DMSans-Medium.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'DM Sans'; font-style: normal; font-weight: 600;
+      font-display: swap; src: url('fonts/DMSans-SemiBold.woff2') format('woff2');
+    }
+    :root {
+      --bg:      #080a0d;
+      --surface: #0e1117;
+      --border:  #1a1f2e;
+      --border2: #252c3f;
+      --text:    #c8d0e0;
+      --muted:   #4a5270;
+      --ok:      #00e5a0;
+      --bad:     #ff4455;
+      --warn:    #f0c040;
+      --info:    #5b8def;
+      --mono: 'Space Mono', monospace;
+      --sans: 'DM Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      width: 320px;
+      overflow-x: hidden;
+    }
+    /* Global light theme — overrides CSS variables for entire popup */
+    body.light {
+      --bg:      #f4f5f8;
+      --surface: #ffffff;
+      --border:  #dde0ea;
+      --border2: #c8ccd8;
+      --text:    #1a1f2e;
+      --muted:   #6b7494;
+      --ok:      #00a870;
+      --bad:     #d42030;
+      --warn:    #b07800;
+      --info:    #2a5bbf;
+    }
+    /* Theme toggle button in header */
+    .theme-btn {
+      background: none; border: 1px solid var(--border2); border-radius: 4px;
+      color: var(--muted); font-size: 12px; cursor: pointer; padding: 2px 5px;
+      transition: border-color .15s, color .15s;
+    }
+    .theme-btn:hover { border-color: var(--text); color: var(--text); }
+
+    /* ── Header ─────────────────────────── */
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg,#0c0f17 0%,var(--bg) 100%);
+    }
+    .brand { display: flex; align-items: center; gap: 9px; }
+    .kt-mark {
+      width: 26px; height: 26px; border-radius: 6px;
+      background: linear-gradient(135deg,#1a2340,#0e1525);
+      border: 1px solid #2a3555;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--mono); font-size: 9px; font-weight: 700;
+      color: var(--info); letter-spacing: -0.5px; flex-shrink: 0;
+    }
+    .brand-text h1 {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      color: #e8edf8; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .brand-text p { font-size: 9.5px; color: var(--muted); margin-top: 1px; }
+    .issuer-pill {
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 2px 8px; white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .issuer-pill.live {
+      color: var(--ok); border-color: rgba(0,229,160,.25);
+      background: rgba(0,229,160,.06);
+    }
+
+    /* ── Scan strip ──────────────────────── */
+    .scan-strip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-bottom: 1px solid var(--border);
+      font-family: var(--mono); font-size: 9px; color: var(--muted);
+      letter-spacing: .04em; min-height: 28px;
+    }
+    .scan-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--muted); flex-shrink: 0;
+    }
+    .scan-dot.scanning { background: var(--info); animation: pulse 1s ease-in-out infinite; }
+    .scan-dot.done     { background: var(--ok); }
+    .scan-dot.err      { background: var(--bad); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .scan-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 255px; }
+
+    /* ── HB M3: token bar + register button ─ */
+    .hb-token-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 12px;
+      background: rgba(99, 102, 241, 0.08);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono); font-size: 11px;
+      /* M3a-fix2 (21.05.2026): sticky so current token + countdown
+         remain visible as user scrolls through harvest entries. */
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    body.light .hb-token-bar { background: rgba(99, 102, 241, 0.06); }
+    .hb-token-row { display: flex; align-items: center; gap: 6px; }
+    .hb-token-label { color: var(--muted); }
+    .hb-token-value { color: rgba(129, 132, 241, 0.95); font-weight: 700; letter-spacing: 0.5px; }
+    body.light .hb-token-value { color: rgba(79, 82, 221, 0.95); }
+    .hb-token-expires { color: var(--muted); font-size: 10px; }
+
+    .hb-register-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-top: 6px;
+    }
+    /* M3a-fix3 (21.05.2026): filled primary button style instead of
+       ghost. Stronger contrast against hash/meta text in harvest list.
+       Per Opcja B, this button renders ONLY for current-token-match
+       entries — :disabled state removed (stale entries are hidden). */
+    .hb-register-btn {
+      background: rgba(99, 102, 241, 0.9);
+      border: 1px solid rgba(99, 102, 241, 0.95);
+      color: #ffffff;
+      padding: 4px 14px; border-radius: 4px;
+      font-family: var(--sans); font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+      letter-spacing: 0.2px;
+    }
+    body.light .hb-register-btn {
+      background: rgba(79, 82, 221, 0.95);
+      border-color: rgba(79, 82, 221, 1);
+      color: #ffffff;
+    }
+    .hb-register-btn:hover:not(:disabled) {
+      background: rgba(129, 132, 251, 1);
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+    }
+    .hb-register-btn:disabled {
+      cursor: default;
+      box-shadow: none;
+    }
+    .hb-register-btn.registering {
+      background: rgba(240, 192, 64, 0.9);
+      border-color: rgba(240, 192, 64, 0.95);
+      color: #1a1f2e;
+      box-shadow: 0 1px 3px rgba(240, 192, 64, 0.3);
+    }
+    .hb-register-btn.registered {
+      background: rgba(0, 229, 160, 0.9);
+      border-color: rgba(0, 229, 160, 0.95);
+      color: #1a1f2e;
+      cursor: default;
+      box-shadow: 0 1px 3px rgba(0, 229, 160, 0.3);
+    }
+    .hb-register-btn.failed {
+      background: rgba(255, 68, 85, 0.9);
+      border-color: rgba(255, 68, 85, 0.95);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(255, 68, 85, 0.3);
+    }
+    .hb-register-info {
+      font-size: 10px; color: var(--muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      flex: 1; min-width: 0;
+    }
+    .hb-register-info a { color: var(--info); text-decoration: none; font-weight: 600; }
+    .hb-register-info a:hover { text-decoration: underline; }
+
+    .hb-hmac-notice {
+      font-size: 10px; line-height: 1.4; color: var(--muted);
+      margin-top: 6px; padding: 6px 8px;
+      border-left: 2px solid var(--info);
+      background: rgba(127,127,127,0.06);
+      border-radius: 4px;
+    }
+    .hb-hmac-link { color: var(--info); text-decoration: none; font-weight: 600; white-space: nowrap; }
+    .hb-hmac-link:hover { text-decoration: underline; }
+
+    /* ── State: none (wszystkie nierozpoznane) ─ */
+    .state-none {
+      display: none; flex-direction: column;
+      padding: 16px 14px 0;
+    }
+
+    /* ── State: custom empty (nothing to scan) ─ */
+    .empty-custom {
+      display: none; padding: 28px 14px;
+      text-align: center;
+    }
+    .empty-custom .empty-icon { font-size: 28px; margin-bottom: 8px; opacity: .35; }
+    .empty-custom .empty-title {
+      font-family: var(--mono); font-size: 10px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .08em;
+    }
+    .empty-custom .empty-sub { font-size: 10px; color: var(--muted); margin-top: 4px; opacity: .7; }
+    .empty-disc-text {
+      margin-top: 14px; text-align: left;
+      font-size: 10.5px; line-height: 1.6;
+      color: rgba(200,208,224,.65);
+      border-top: 1px solid var(--border2);
+      padding-top: 12px;
+    }
+    .btn-report-empty {
+      margin-top: 10px; width: 100%; padding: 7px;
+      border-radius: 6px; border: none; cursor: pointer;
+      font-family: var(--sans); font-size: 11px; font-weight: 600;
+      background: rgba(91,141,239,.12); color: var(--info);
+      border: 1px solid rgba(91,141,239,.3);
+      transition: all .15s;
+    }
+    .btn-report-empty:hover { background: rgba(91,141,239,.22); }
+    .btn-report-empty:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-report-empty.sent {
+      background: rgba(0,229,160,.1) !important;
+      color: var(--ok) !important;
+      border-color: rgba(0,229,160,.25) !important;
+    }
+
+    /* ── State: results ──────────────────── */
+    .state-results { display: none; }
+    .result-item {
+      display: grid; grid-template-columns: 28px 1fr;
+      gap: 0 10px; padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      animation: fadeSlide .2s ease forwards; opacity: 0;
+    }
+    @keyframes fadeSlide { from{opacity:0;transform:translateX(-5px)} to{opacity:1;transform:translateX(0)} }
+    .status-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0; align-self: start; margin-top: 1px;
+    }
+    .icon-ok   { background:rgba(0,229,160,.12); color:var(--ok);  border:1px solid rgba(0,229,160,.22); }
+    .icon-bad  { background:rgba(255,68,85,.12);  color:var(--bad); border:1px solid rgba(255,68,85,.22); }
+    .icon-warn { background:rgba(240,192,64,.12); color:var(--warn);border:1px solid rgba(240,192,64,.22); }
+    .result-issuer {
+      font-size: 11.5px; font-weight: 600; color: #d8e0f0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 235px;
+    }
+    .result-asset {
+      font-size: 10px; font-weight: 500; color: rgba(120,180,255,.85);
+      margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 235px;
+    }
+    .result-status { font-size: 10px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+    .result-status.ok   { color: rgba(0,229,160,.75); }
+    .result-status.bad  { color: rgba(255,100,115,.85); }
+    .result-status.warn { color: rgba(240,192,64,.85); }
+    .result-meta { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+    .tag {
+      font-family: var(--mono); font-size: 8.5px;
+      padding: 1px 5px; border-radius: 3px;
+      border: 1px solid var(--border2); color: var(--muted); background: var(--surface);
+    }
+    .tag.email { color:var(--info); border-color:rgba(91,141,239,.25); background:rgba(91,141,239,.07); }
+    .tag.web   { color:#8b70d8; border-color:rgba(139,112,216,.25); background:rgba(139,112,216,.07); }
+
+    /* ── Disclaimer ──────────────────────── */
+    .disclaimer {
+      margin: 0; padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .disclaimer-none {
+      background: rgba(255,68,85,.04);
+      border-top-color: rgba(255,68,85,.15);
+    }
+    .disclaimer-violation {
+      background: rgba(255,40,55,.07);
+      border-top: 2px solid rgba(255,68,85,.5);
+    }
+    .disclaimer-partial {
+      background: rgba(240,192,64,.04);
+      border-top: 1px solid rgba(240,192,64,.15);
+    }
+    .disclaimer-mixed {
+      background: rgba(91,141,239,.04);
+      border-top: 1px solid rgba(91,141,239,.2);
+    }
+    .disc-icon {
+      font-size: 18px; line-height: 1;
+      color: var(--warn);
+    }
+    .disclaimer-none .disc-icon      { color: var(--bad); }
+    .disclaimer-violation .disc-icon { font-size: 20px; color: var(--bad); }
+    .disclaimer-mixed .disc-icon     { color: var(--info); }
+    .disc-text {
+      font-size: 10.5px; line-height: 1.6;
+      color: rgba(200,208,224,.75);
+    }
+    .disc-text strong {
+      display: block; margin-bottom: 3px;
+      font-size: 11px; font-weight: 600;
+      color: var(--text);
+    }
+    .disclaimer-none .disc-text strong      { color: rgba(255,100,115,.9); }
+    .disclaimer-violation .disc-text strong { color: #ff5566; letter-spacing: .01em; }
+    .disclaimer-partial .disc-text strong   { color: rgba(240,192,64,.9); }
+    .disclaimer-mixed .disc-text strong     { color: rgba(91,141,239,.9); }
+    .disc-note {
+      font-size: 9px; color: var(--muted);
+      font-family: var(--mono); letter-spacing: .02em;
+    }
+    .btn-report {
+      width: 100%; padding: 7px;
+      border-radius: 6px; border: none; cursor: pointer;
+      font-family: var(--sans); font-size: 11px; font-weight: 600;
+      transition: all .15s;
+    }
+    .disclaimer-none .btn-report,
+    .disclaimer-violation .btn-report {
+      background: rgba(255,68,85,.15); color: rgba(255,120,130,.95);
+      border: 1px solid rgba(255,68,85,.3);
+    }
+    .disclaimer-violation .btn-report {
+      background: rgba(255,30,45,.22); color: #ff8090;
+      border: 1px solid rgba(255,68,85,.5);
+      font-size: 11.5px;
+    }
+    .disclaimer-none .btn-report:hover,
+    .disclaimer-violation .btn-report:hover { background: rgba(255,68,85,.32); }
+    .disclaimer-partial .btn-report {
+      background: rgba(240,192,64,.12); color: rgba(240,192,64,.95);
+      border: 1px solid rgba(240,192,64,.3);
+    }
+    .disclaimer-partial .btn-report:hover { background: rgba(240,192,64,.22); }
+    .disclaimer-mixed .btn-report {
+      background: rgba(91,141,239,.12); color: rgba(91,141,239,.95);
+      border: 1px solid rgba(91,141,239,.3);
+    }
+    .disclaimer-mixed .btn-report:hover { background: rgba(91,141,239,.22); }
+    .btn-report:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-report.sent {
+      background: rgba(0,229,160,.1) !important;
+      color: var(--ok) !important;
+      border-color: rgba(0,229,160,.25) !important;
+    }
+
+    /* ── Disclaimer box (dla partial w state-results) ─ */
+    #disclaimerBox .disclaimer { border-top: 1px solid var(--border); }
+
+    /* ── Error ───────────────────────────── */
+    .error-msg {
+      display: none; padding: 16px 14px;
+      font-size: 10px; color: rgba(255,68,85,.7);
+      font-family: var(--mono); text-align: center; line-height: 1.6;
+      white-space: pre-line;
+    }
+
+    /* ── Footer ──────────────────────────── */
+    .footer {
+      display: flex; gap: 6px; padding: 8px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .btn {
+      flex: 1; background: transparent;
+      border: 1px solid var(--border2); border-radius: 6px;
+      color: var(--muted); font-family: var(--sans);
+      font-size: 10.5px; font-weight: 500;
+      padding: 6px 8px; cursor: pointer;
+      text-align: center; transition: all .12s;
+    }
+    .btn:hover { background: var(--border); color: var(--text); }
+    .btn.primary {
+      color: var(--info); border-color: rgba(91,141,239,.35);
+      background: rgba(91,141,239,.06);
+    }
+    .btn.primary:hover { background: rgba(91,141,239,.12); }
+    .btn.harvest {
+      color: #e0a030; border-color: rgba(224,160,48,.35);
+      background: rgba(224,160,48,.06);
+    }
+    .btn.harvest:hover { background: rgba(224,160,48,.15); }
+
+    /* ── Harvest panel ─────────────────────── */
+    .harvest-panel { display: none; max-height: 320px; overflow-y: auto; }
+    .harvest-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 14px; border-bottom: 1px solid var(--border);
+      background: rgba(224,160,48,.05);
+    }
+    .harvest-header span {
+      font-family: var(--mono); font-size: 9px; color: #e0a030;
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .harvest-actions { display: flex; gap: 4px; align-items: center; }
+    .harvest-actions button {
+      font-family: var(--mono); font-size: 8px; padding: 2px 6px;
+      border-radius: 3px; border: 1px solid rgba(224,160,48,.3);
+      background: rgba(224,160,48,.08); color: #e0a030; cursor: pointer;
+    }
+    .harvest-actions button:hover { background: rgba(224,160,48,.2); }
+    .harvest-actions button.copied { color: var(--ok); border-color: rgba(0,229,160,.3); }
+    .harvest-theme-btn {
+      font-size: 14px; padding: 1px 5px; cursor: pointer;
+      border: 1px solid rgba(224,160,48,.3); border-radius: 3px;
+      background: rgba(224,160,48,.08); line-height: 1.2;
+      color: #e0a030; font-family: inherit;
+    }
+    .harvest-theme-btn:hover { background: rgba(224,160,48,.2); }
+    .harvest-item {
+      display: grid; grid-template-columns: 40px 1fr;
+      gap: 0 8px; padding: 6px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 9px; cursor: pointer; transition: background .1s;
+    }
+    .harvest-item:hover { background: rgba(224,160,48,.05); }
+    .harvest-item { position: relative; }
+    body.light .harvest-item:hover { background: rgba(91,141,239,.07); }
+    /* Magnifier button */
+    .harvest-magnifier {
+      display: none; position: absolute; right: 8px; top: 50%;
+      transform: translateY(-50%);
+      width: 20px; height: 20px; border-radius: 50%;
+      background: none; border: 1px solid var(--border2);
+      color: var(--muted); font-size: 11px; cursor: pointer;
+      align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .harvest-item:hover .harvest-magnifier { display: flex; }
+    .harvest-magnifier:hover { background: var(--surface); color: var(--text); }
+    /* Detail overlay */
+    .harvest-detail {
+      display: none; position: absolute; left: 10px; z-index: 100;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 10px 12px;
+      width: 280px; max-width: 290px;
+      box-shadow: 0 6px 24px rgba(0,0,0,.4);
+      font-size: 10px;
+    }
+    .harvest-detail.visible { display: block; }
+    #harvestList { position: relative; }
+    .harvest-detail img { max-width: 100%; max-height: 160px;
+      object-fit: contain; border-radius: 4px; margin-bottom: 6px; display: block; }
+    .harvest-detail-hash {
+      font-family: var(--mono); font-size: 11px; color: #e0a030;
+      word-break: break-all; margin-bottom: 4px; cursor: pointer;
+    }
+    body.light .harvest-detail-hash { color: var(--warn); }
+    .harvest-detail-hash:hover { opacity: .7; }
+    .harvest-detail-row { color: var(--muted); font-size: 9px;
+      margin-top: 2px; word-break: break-all; }
+    .harvest-item.in-header { border-left: 2px solid #e0a030; }
+    .harvest-thumb {
+      width: 40px; height: 40px; border-radius: 4px;
+      background: var(--surface); border: 1px solid var(--border);
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+      transition: background .15s, border-color .15s;
+    }
+    .harvest-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .harvest-thumb .no-preview {
+      font-family: var(--mono); font-size: 7px; color: var(--muted); text-align: center;
+    }
+
+    /* Harvest light theme — now handled by body.light CSS variables above */
+    body.light .harvest-item { background: rgba(0,0,0,.01); }
+    body.light .harvest-thumb { background: #eef0f4; border-color: #d0d4de; }
+    body.light .harvest-hash { color: var(--warn); }
+    body.light .harvest-meta { color: var(--muted); }
+    body.light .harvest-dims { color: var(--muted); }
+    .harvest-hash {
+      font-family: var(--mono); font-size: 9px; color: #e0a030;
+      letter-spacing: .02em;
+    }
+    .harvest-meta {
+      font-size: 8.5px; color: var(--muted); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px;
+    }
+    .harvest-dims {
+      font-family: var(--mono); font-size: 8px; color: var(--muted); margin-top: 1px;
+    }
+    .harvest-badge-hdr {
+      display: inline-block; font-family: var(--mono); font-size: 7px;
+      padding: 0 3px; border-radius: 2px; margin-left: 4px;
+      background: rgba(224,160,48,.15); color: #e0a030; border: 1px solid rgba(224,160,48,.25);
+    }
+  </style>
+</head>
+<body>
+
+  
+  <div class="header">
+    <div class="brand">
+      <div class="kt-mark">KT</div>
+      <div class="brand-text">
+        <h1>Human Badge by KickTech</h1>
+        <p>Active proof of authorship</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div class="issuer-pill" id="issuerPill">…</div>
+      <button class="theme-btn" id="btnThemeToggle" title="Toggle light/dark theme">☀️</button>
+    </div>
+  </div>
+
+  
+  <div class="scan-strip">
+    <div class="scan-dot scanning" id="scanDot"></div>
+    <div class="scan-url" id="scanUrl">Connecting to tab…</div>
+  </div>
+
+  
+  <div class="hb-token-bar" id="hbTokenBar">
+    <div class="hb-token-row">
+      <span class="hb-token-label">Token:</span>
+      <span class="hb-token-value" id="hbTokenValue">…</span>
+    </div>
+    <span class="hb-token-expires" id="hbTokenExpires">…</span>
+  </div>
+
+  
+  <div class="state-none disclaimer disclaimer-none" id="stateNone">
+    <div class="disc-icon">✗</div>
+    <div class="disc-text">
+      <strong>No content recognized in registry.</strong>
+    </div>
+    <div class="disc-note">⚠ Your data is never sent without your consent.</div>
+    <button class="btn-report" id="btnReportNone">Learn more about KickTech HumanBadge</button>
+  </div>
+
+  
+  <div class="empty-custom" id="emptyCustom">
+    <div class="empty-icon">🔍</div>
+    <div class="empty-title">No content to verify</div>
+    <div class="empty-sub"></div>
+    <div class="disc-text empty-disc-text">
+      If you think this page should be verified by KickTech or want to report its publisher to our database — you can send us its address. We'll contact the publisher to determine whether they use or want to use our verification system.
+    </div>
+    <div class="disc-note">⚠ Your data is never sent without your consent.</div>
+    <button class="btn-report btn-report-empty" id="btnReportEmpty">Learn more about KickTech HumanBadge</button>
+  </div>
+
+  
+  <div class="state-results" id="stateResults">
+    <div id="resultsList"></div>
+    
+    <div id="disclaimerBox"></div>
+  </div>
+
+  
+  <div class="harvest-panel" id="harvestPanel">
+    <div class="harvest-header">
+      <span id="harvestCount">Harvest: 0 images</span>
+      <div class="harvest-actions">
+        <button id="btnCopyHarvest">Copy JSON</button>
+        <button id="btnCloseHarvest">✕</button>
+      </div>
+    </div>
+    <div id="harvestList">
+      <div id="harvestDetail" class="harvest-detail">
+        <button id="harvestDetailClose" style="float:right;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;line-height:1;margin:-2px -4px 4px 8px;">✕</button>
+        <div id="harvestDetailImg"></div>
+        <div class="harvest-detail-hash" id="harvestDetailHash" title="Click to copy"></div>
+        <div class="harvest-detail-row" id="harvestDetailMeta"></div>
+        <div class="harvest-detail-row" id="harvestDetailDims"></div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="error-msg" id="errorMsg"></div>
+
+  
+  <div class="footer">
+    <button class="btn" id="btnRefresh">↺ Refresh</button>
+    <button class="btn harvest" id="btnHarvest">⛏ Harvest</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

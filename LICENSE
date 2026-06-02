@@ -1,0 +1,230 @@
+KickTech HumanBadge
+
+Copyright (c) 2024-2026 FAPL Sp. z o.o. (KRS 0000696416)
+All rights reserved beyond the license terms below.
+
+────────────────────────────────────────────────────────────────────────
+DRAFT FOR LEGAL REVIEW
+This file is an engineering draft prepared for the company's legal
+counsel. Final wording must be reviewed and approved by counsel before
+public release.
+────────────────────────────────────────────────────────────────────────
+
+
+LICENSE SELECTION
+
+This software ("KickTech HumanBadge") is licensed under the
+PolyForm Strict License 1.0.0, the canonical text of which is included
+below verbatim.
+
+  License name:    PolyForm Strict License 1.0.0
+  SPDX identifier: PolyForm-Strict-1.0.0
+  Publisher:       The PolyForm Project
+                   (https://polyformproject.org/about/)
+
+  Sources of the canonical text (two authoritative locations,
+  both maintained by the PolyForm Project — listed for redundancy
+  in case one is temporarily unavailable):
+
+    - https://polyformproject.org/licenses/strict/1.0.0/
+      (PolyForm Project site. This URL is also embedded inside
+      the verbatim license text below, per PolyForm's own
+      canonical self-reference.)
+
+    - https://github.com/polyformproject/polyform-licenses/blob/1.0.0/PolyForm-Strict-1.0.0.md
+      (PolyForm Project's official GitHub repository. Authoritative
+      mirror of the same license text.)
+
+This license was selected because it precisely matches our intent for
+KickTech HumanBadge:
+
+  - It PERMITS any noncommercial use, including viewing, auditing,
+    studying the published code, and personal beta-installation in your
+    own browser.
+  - It does NOT permit distributing the software in any form.
+  - It does NOT permit making changes, modifications, or new works
+    based on the software.
+  - It does NOT permit commercial use.
+  - It includes a patent license and patent-defense clauses.
+
+PolyForm Strict 1.0.0 is reproduced below verbatim, without
+modification, in accordance with the PolyForm Project's terms of use.
+KickTech's supplementary notices (copyright, trademark, governing law)
+appear OUTSIDE the License text — before and after the verbatim block —
+and are clearly demarcated.
+
+
+════════════════════════════════════════════════════════════════════════
+BEGIN POLYFORM STRICT LICENSE 1.0.0 — VERBATIM TEXT
+════════════════════════════════════════════════════════════════════════
+
+# PolyForm Strict License 1.0.0
+
+<https://polyformproject.org/licenses/strict/1.0.0>
+
+## Acceptance
+
+In order to get any license under these terms, you must agree
+to them as both strict obligations and conditions to all
+your licenses.
+
+## Copyright License
+
+The licensor grants you a copyright license for the software
+to do everything you might do with the software that would
+otherwise infringe the licensor's copyright in it for any
+permitted purpose, other than distributing the software or
+making changes or new works based on the software.
+
+## Patent License
+
+The licensor grants you a patent license for the software that
+covers patent claims the licensor can license, or becomes able
+to license, that you would infringe by using the software.
+
+## Noncommercial Purposes
+
+Any noncommercial purpose is a permitted purpose.
+
+## Personal Uses
+
+Personal use for research, experiment, and testing for
+the benefit of public knowledge, personal study, private
+entertainment, hobby projects, amateur pursuits, or religious
+observance, without any anticipated commercial application,
+is use for a permitted purpose.
+
+## Noncommercial Organizations
+
+Use by any charitable organization, educational institution,
+public research organization, public safety or health
+organization, environmental protection organization,
+or government institution is use for a permitted purpose
+regardless of the source of funding or obligations resulting
+from the funding.
+
+## Fair Use
+
+You may have "fair use" rights for the software under the
+law. These terms do not limit them.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of
+your licenses to anyone else, or prevent the licensor from
+granting licenses to anyone else. These terms do not imply
+any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or
+contributes to infringement of any patent, your patent license
+for the software granted under these terms ends immediately. If
+your company makes such a claim, your patent license ends
+immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have
+violated any of these terms, or done anything with the software
+not covered by your licenses, your licenses can nonetheless
+continue if you come into full compliance with these terms,
+and take practical steps to correct past violations, within
+32 days of receiving notice. Otherwise, all your licenses
+end immediately.
+
+## No Liability
+
+***As far as the law allows, the software comes as is, without
+any warranty or condition, and the licensor will not be liable
+to you for any damages arising out of these terms or the use
+or nature of the software, under any kind of legal claim.***
+
+## Definitions
+
+The **licensor** is the individual or entity offering these
+terms, and the **software** is the software the licensor makes
+available under these terms.
+
+**You** refers to the individual or entity agreeing to these
+terms.
+
+**Your company** is any legal entity, sole proprietorship,
+or other kind of organization that you work for, plus all
+organizations that have control over, are under the control of,
+or are under common control with that organization. **Control**
+means ownership of substantially all the assets of an entity,
+or the power to direct its management and policies by vote,
+contract, or otherwise. Control can be direct or indirect.
+
+**Your licenses** are all the licenses granted to you for the
+software under these terms.
+
+**Use** means anything you do with the software requiring one
+of your licenses.
+
+════════════════════════════════════════════════════════════════════════
+END POLYFORM STRICT LICENSE 1.0.0 — VERBATIM TEXT
+════════════════════════════════════════════════════════════════════════
+
+
+SUPPLEMENTARY NOTICES BY KICKTECH (NOT PART OF THE LICENSE TEXT ABOVE)
+
+The notices below are KickTech's additions. They DO NOT modify the
+PolyForm Strict License 1.0.0 text and are placed strictly outside it.
+
+
+1. TRADEMARK NOTICE
+
+   The names and marks "KickTech", "KickTech HumanBadge", "KTOR",
+   "KTOOR", "KickTech Origin Registry", "KickTech Origin Open Registry",
+   and the 👤 human-badge symbol are trademarks of FAPL Sp. z o.o.
+
+   The PolyForm Strict License 1.0.0 above licenses copyright and
+   patent rights only — it does not grant any trademark rights. This
+   trademark notice does not restrict good-faith descriptive reference
+   to KickTech HumanBadge (for example, a security researcher
+   publishing audit results may identify the software by its name).
+
+   This trademark notice is not a license; it is a notice of rights
+   reserved.
+
+
+2. SCOPE OF "THE SOFTWARE"
+
+   For the purposes of the License above, "the software" means the
+   built extension artifact (`dist/`) published in the official
+   KickTech HumanBadge GitHub repository, the audit-reference code
+   (`audit-references/`) published in the same repository, and the
+   build artifacts distributed through official browser-store
+   listings.
+
+
+3. KICKTECH SERVICES — GOVERNED SEPARATELY
+
+   The software, when installed and run, may interact with KickTech's
+   hosted services (gateway, registry, verification endpoints, the
+   Forward-to-Verify email service). Use of those services is governed
+   by the KickTech Terms of Service and the KickTech Privacy Policy
+   published at https://www.kicktech.io, and not by the License above.
+
+
+4. GOVERNING LAW AND JURISDICTION
+
+   The License above is published by the PolyForm Project on a
+   jurisdiction-neutral basis. As a supplementary notice, KickTech
+   elects the Republic of Poland as the
+   governing law for matters arising between KickTech and licensees
+   under the License above, with exclusive jurisdiction of the
+   competent courts of Warsaw, Poland, without
+   regard to conflict-of-law provisions. This election does not
+   modify the PolyForm Strict License 1.0.0 text.
+
+
+5. COMMERCIAL, REDISTRIBUTION, DERIVATIVE-WORK, AND TRADEMARK INQUIRIES
+
+   For commercial use, redistribution, derivative-work licensing,
+   trademark use beyond good-faith descriptive reference, or any
+   permission outside the scope of the License above — including
+   inquiries about KTOR Premium, KTOOR participation, and integration
+   agreements — contact KickTech via https://www.kicktech.io.

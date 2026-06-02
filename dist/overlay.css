@@ -1,0 +1,175 @@
+/* ============================================================
+   overlay.css – Human Badge by KickTech overlay styles
+   ============================================================ */
+
+/* ── Kontener badge ───────────────────────────────────────── */
+.kt-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: default;
+  pointer-events: auto;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.28), 0 0 0 1px rgba(255,255,255,0.15);
+  opacity: 0;
+  animation: kt-fadein 0.2s ease forwards;
+  /* nie blokuj kliknięć w obraz pod spodem po tooltip dismiss */
+  user-select: none;
+}
+
+@keyframes kt-fadein {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Kolory stanów ────────────────────────────────────────── */
+.kt-ok {
+  background: rgba(16, 163, 74, 0.93);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+.kt-bad {
+  background: rgba(210, 40, 40, 0.93);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+.kt-cdn_only {
+  /* Jaskrawo żółty dla ostrzeżenia CDN-only */
+  background: rgba(234, 196, 0, 0.96);
+  color: #222;
+  border: 1px solid rgba(0,0,0,0.12);
+}
+
+.kt-unknown {
+  background: rgba(90, 90, 110, 0.88);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* HB M5: indygo dla Human Badge — semantycznie odrębne od Premium
+   ✓/✗/⚠. Wizualnie pasuje do ikony 👤 (neutralna sylwetka),
+   kontrastuje z zielonym/czerwonym/żółtym Premium. */
+.kt-human {
+  background: rgba(99, 102, 241, 0.95);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+
+/* ── Ikona i skrócony label ───────────────────────────────── */
+.kt-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.kt-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Tooltip (pojawia się na hover) ───────────────────────── */
+.kt-tooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: normal;
+  word-break: break-word;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.1);
+  z-index: 2147483647;
+  animation: kt-fadein 0.15s ease forwards;
+}
+
+.kt-badge:hover .kt-tooltip,
+.kt-badge.kt-open .kt-tooltip {
+  display: block;
+}
+
+/* gdy tooltip jest przypięty kliknięciem, pozwól na interakcję */
+.kt-badge.kt-open .kt-tooltip {
+  pointer-events: auto;
+}
+
+/* Tooltip dziedziczy kolor od rodzica */
+.kt-ok    .kt-tooltip { background: rgba(14, 140, 64, 0.97); color: #fff; }
+.kt-bad   .kt-tooltip { background: rgba(190, 30, 30, 0.97); color: #fff; }
+.kt-cdn_only .kt-tooltip { background: rgba(200, 165, 0, 0.97); color: #111; }
+.kt-unknown  .kt-tooltip { background: rgba(70, 70, 90, 0.96); color: #fff; }
+.kt-human    .kt-tooltip { background: rgba(79, 82, 221, 0.97); color: #fff; }
+
+/* Strzałka tooltip ───────────────────────────────────────── */
+.kt-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 14px;
+  border: 5px solid transparent;
+}
+.kt-ok    .kt-tooltip::after { border-top-color: rgba(14, 140, 64, 0.97); }
+.kt-bad   .kt-tooltip::after { border-top-color: rgba(190, 30, 30, 0.97); }
+.kt-cdn_only .kt-tooltip::after { border-top-color: rgba(200, 165, 0, 0.97); }
+.kt-unknown  .kt-tooltip::after { border-top-color: rgba(70, 70, 90, 0.96); }
+.kt-human    .kt-tooltip::after { border-top-color: rgba(79, 82, 221, 0.97); }
+
+/* ── Linie w tooltipie ────────────────────────────────────── */
+.kt-tooltip-title {
+  font-weight: 700;
+  font-size: 11.5px;
+  margin-bottom: 2px;
+}
+.kt-tooltip-asset {
+  font-weight: 600;
+  font-size: 10.5px;
+  color: #a8d8ff;
+  margin-bottom: 3px;
+}
+.kt-tooltip-desc {
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+.kt-tooltip-hint {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255,255,255,0.15);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.kt-bad   .kt-tooltip-hint { border-top-color: rgba(255,255,255,0.2); color: #ffccd0; }
+.kt-cdn_only .kt-tooltip-hint { border-top-color: rgba(0,0,0,0.15); color: #6b5400; }
+.kt-unknown  .kt-tooltip-hint { opacity: 0.6; }
+
+/* ── Tooltip flip: poniżej badge gdy blisko góry ekranu ───── */
+.kt-tooltip-below::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent !important;
+}
+.kt-ok    .kt-tooltip-below::after { border-bottom-color: rgba(14, 140, 64, 0.97); }
+.kt-bad   .kt-tooltip-below::after { border-bottom-color: rgba(190, 30, 30, 0.97); }
+.kt-cdn_only .kt-tooltip-below::after { border-bottom-color: rgba(200, 165, 0, 0.97); }
+.kt-unknown  .kt-tooltip-below::after { border-bottom-color: rgba(70, 70, 90, 0.96); }
+.kt-human    .kt-tooltip-below::after { border-bottom-color: rgba(79, 82, 221, 0.97); }

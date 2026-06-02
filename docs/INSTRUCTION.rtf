@@ -1,0 +1,645 @@
+{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 KickTech HumanBadge \u8212- Technical Instruction\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 Companion document to the {\field{\*\fldinst{HYPERLINK "../README.md"}}{\fldrslt{\ul
+README
+}}}
+. Covers registration flow, verification flow, anti-spoof use-cases, privacy details, and the KTOR ecosystem.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 1. Introduction\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 KickTech HumanBadge (HB) is a browser extension that lets you \u8212- as an ordinary social-media user, blogger, or message author \u8212- attach a verifiable proof of authorship to specific posts, messages, and emails you publish. Readers running the extension see a \u55357 ?\u56420 ? badge next to content that matches a published registration. If the content is altered after registration, the badge disappears.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This document describes how it works in practice and how to use it. For the high-level overview, see the {\field{\*\fldinst{HYPERLINK "../README.md"}}{\fldrslt{\ul
+README
+}}}
+.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Important framing \u8212- HB is the lightweight, popular-use tier of KickTech\u8217's origin-registry family.} It is designed for everyday content authenticity between people on social platforms and messengers. HB does {\b not perform identity verification of registrants} \u8212- anyone can install HB and register anything on their own account. For authentication that requires verified-issuer identity (banks, public institutions, critical infrastructure), KickTech provides the full KTOR ecosystem (see \u167 ?12). The two systems coexist without conflict \u8212- a user with both extensions installed will, in certain cases, see two different attestations from two different verification scopes.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 2. The principle: proof of action\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 What HB actually proves\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB attests to a {\b deliberate publishing action} at a specific moment by a specific account holder. The chain of evidence is:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab The publisher installs HB and is issued a per-installation cryptographic seed (stored locally, never transmitted).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab Every 10 minutes, HB derives a fresh short token ({\f1 KT-XXXXXX} format) from the seed and the current time window. The token rotates automatically.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab To register a piece of content, the publisher must paste {\b the current token} into the content and publish it on their channel.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab The publisher then opens HB and registers the published content \u8212- this hashes the visible text and writes the hash to the public registry on the Base Sepolia blockchain.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab Readers visiting that content see HB cross-reference the visible KT-token + content hash + publishing-channel context against the on-chain registry. A match produces the \u55357 ?\u56420 ? badge.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Why this is hard for bots and adversaries\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The principle is {\b proof of action}, not \u8220"proof of human\u8221". An attacker would need to do all of the following, in real time, to forge a registration:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Control the publisher\u8217's account credentials} \u8212- to publish content on the authorized channel.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Hold a currently-valid KT-token} \u8212- which rotates every 10 minutes; harvested tokens expire fast.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Be at the keyboard during the action} \u8212- the registration is a UI-driven action triggered from the popup, not a passive API call discoverable from outside.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Not race the rotation} \u8212- by the time a scraped token reaches an attacker, it may already be stale.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The registration is tied to {\b the publisher\u8217's account on their channel} (e.g., your specific Twitter handle, your LinkedIn profile). An attacker impersonating you on a different account cannot produce a matching registration, because the channel-account itself is part of the implicit context that HB checks.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 What HB is NOT\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 It is essential to be clear about what HB does {\b not} do:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b NOT \u8220"proof of human\u8221"} \u8212- HB does not verify that the publisher is a biological person.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b NOT a digital identity scheme} \u8212- HB does not establish, verify, or attest to a user\u8217's legal identity.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b NOT a KYC mechanism} \u8212- no personal data, no document verification, no biometrics.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b NOT subject to eIDAS, GDPR Article 9, or other regulated-identity frameworks} \u8212- because no personal-data attestation is performed.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b NOT an \u8220"officialness\u8221" certification} \u8212- HB has zero identity verification of registrants. The \u55357 ?\u56420 ? badge confirms that a particular account holder deliberately registered content \u8212- it does NOT confirm that the account holder is who they claim to be in a legal or institutional sense. For institutional-trust certification, see \u167 ?12 (KTOR Premium).\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB authenticates {\b a specific publishing act at a specific moment}, performed by whoever held the relevant publishing-channel credentials and the rotating token at that moment.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 3. Registration flow (publisher workflow)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This is the workflow for someone publishing content they want to authenticate.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Step-by-step\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 1.\tx360\tab {\b Install HB} \u8212- see the Install section in the {\field{\*\fldinst{HYPERLINK "../README.md"}}{\fldrslt{\ul
+README
+}}}
+. HB works identically on Chrome, Edge, Opera, Brave, and other Chromium-based browsers.\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 2.\tx360\tab {\b Open the popup} \u8212- click the HB icon in the toolbar. The popup shows your current 10-minute token (e.g., {\f1 KT-A4F7B2}) and a countdown to the next rotation.\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 3.\tx360\tab {\b Copy the current token} \u8212- one click on the token field.\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 4.\tx360\tab {\b Paste the token into your content} \u8212- place the token somewhere visible in the post, message, or email. Common patterns:\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab At the end of a post: {\i \u8220"\u8230 ? full text of the post. KT-A4F7B2\u8221"}\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab In an email signature for a one-off authenticated message\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab As a hashtag-style suffix on social posts\sa180\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 5.\tx360\tab {\b Publish on your channel} \u8212- post on X, LinkedIn, Telegram, send the email, etc. The content must be visible (not in a password-protected area, not behind a paywall HB cannot read).\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 6.\tx360\tab {\b Return to HB and register} \u8212- open the popup and click \u8220"Register\u8221" (or use Harvest for batch registration \u8212- see \u167 ?6). HB will compute the hash of the visible text and submit a registration to the public registry.\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 7.\tx360\tab {\b Wait for on-chain confirmation} \u8212- during beta, expect 5 to 50 minutes between registration and visible badge across all readers\u8217' extensions (gateway snapshot refresh). The popup shows status as it progresses.\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 8.\tx360\tab {\b Confirm visibility} \u8212- visit the published content as a logged-out user or use a separate browser to confirm the \u55357 ?\u56420 ? badge appears.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Important notes\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Token must be current at the moment of publishing} \u8212- copy \u8594 ? paste \u8594 ? publish should happen within the same 10-minute window. If you wait too long, the token will have rotated.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Hash is computed on visible text} \u8212- formatting, hidden metadata, and tracking parameters do not affect the hash. Two visually-identical posts produce the same hash regardless of underlying markup.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Edits invalidate} \u8212- if you edit the post after registration, the new hash no longer matches the registered hash, and the badge disappears for new readers. You\u8217'd need to re-register the new version.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Smartphone publishing\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 {\b HB does not run on smartphone apps} (see \u167 ?7). If you want to register content while on a smartphone, open the relevant platform\u8217's website in a desktop/laptop Chromium browser with HB installed, log in there, and use the web version to register.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 4. Verification flow (reader workflow)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This is what happens automatically when a reader running HB visits a page.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 What HB does in the background\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab HB scans visible text on the current page for {\f1 KT-XXXXXX}-format tokens.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab For each token found, HB computes a local hash of the surrounding content.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab HB queries the on-chain registry (via the gateway) to check whether a matching registration exists.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab If a match is found, HB {\b additionally verifies that the page\u8217's publishing context (account, channel) matches the registered publisher}.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab HB inserts a badge based on the combined result:\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab {\b \u55357 ?\u56420 ? badge} \u8212- content registered, hash matches, and publishing context matches. For person-publication surfaces (X timeline, LinkedIn personal feed / profile, Facebook wall), this includes confirming the author handle against the registration\u8217's keyed-HMAC marker.\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab {\b No badge} \u8212- no KT-token on the page, no match in the registry, or hash mismatch (content edited after registration).\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab {\b Warning badge} \u8212- hash matches the registration record, but the publishing context cannot be confirmed as the registered publisher. This covers two cases: (a) the content is on a different account or surface from the registered publisher (the unauthorized-copy scenario), or (b) the registered author has exercised the right to erasure of their handle marker, after which the author can no longer be confirmed by anyone.\sa180\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Recognizing an unauthorized copy of a registered post\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 When someone copies a registered post to another account (with or without modification), HB detects this in one of several ways:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Text modified} \u8212- even minor edits (changed numbers, added phrases, removed disclaimers) produce a different hash. {\b No badge on the copy.} The original (on the correctly-registered publisher\u8217's account) still shows the \u55357 ?\u56420 ? badge.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Text exact + KT-token exact, but different account} \u8212- the hash matches the registration record, but the publishing context differs from the registered publisher. For person-publication surfaces (X timeline, LinkedIn personal feed / profile, Facebook wall), HB performs a keyed-HMAC author-handle check against the registration \u8212- the impersonator\u8217's handle does not match, and HB shows a {\b warning badge} on the copy. For other surfaces (DMs, group / channel / conversation IDs, organization slugs, provider domains), a structurally simpler identifier-match handles the same role.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Text exact + malicious image/link overlay} \u8212- the visible text still hashes to the registered value, but the post now contains an additional element (e.g., a phishing-image clicking to a malicious URL). In this case the publishing-context check is what protects the reader: a copy on a different account triggers the warning regardless of any added overlay.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Author has exercised the right to erasure of their handle marker} (see PRIVACY.md \u167 ?9.2a) \u8212- the server-side key that lets anyone confirm the author HMAC has been permanently deleted, so HB can no longer attest to the author of that registration. If the content text is still byte-identical to what was registered, HB still recognizes the content hash but cannot confirm the author, so it shows a {\b warning badge} rather than the \u55357 ?\u56420 ? badge \u8212- the content is recognized but the page is not an authorized author of it (treated as a possible copy).\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 In all four cases, {\b the original \u8212- on the correctly-registered publisher\u8217's account \u8212- continues to show the \u55357 ?\u56420 ? badge normally}, except in the erasure case where the original publisher has chosen to remove their author attestation. The detection otherwise applies to the copy, not the original.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Smartphone reading\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 {\b HB does not run on smartphone apps.} If you want to verify content while on a smartphone, open the relevant platform\u8217's website in a Chromium-based browser with HB installed. The badge does not appear in mobile native apps.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Edge cases\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Dynamic content (X, LinkedIn feeds)} \u8212- HB re-scans when the page changes (new posts loaded, scrolling, expand/collapse). Some lazy-loaded content may take a moment to badge after scrolling.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Gmail special handling} \u8212- HB additionally verifies sender-domain authorization and surfaces a warning banner if email contains suspicious links (relay services hiding destination, links to unregistered domains).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Edited content} \u8212- if a publisher edits content after registering, readers visiting the updated version see no badge. This is deliberate \u8212- HB attests to the exact text that was registered.\sa180\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 5. The Refresh tip \u8212- important\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 {\b After installing HB, after a service restart, or any time HB seems to not see content you expect it to verify: reload the open tab and press the popup\u8217's \u8220"\u8634 ? Refresh\u8221" button.}\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This is the single most useful operational tip for HB:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab HB\u8217's on-chain registry snapshot refreshes periodically. After certain events (extension reload, browser restart, registry resync), the snapshot in HB\u8217's local cache may briefly lag behind the current on-chain state.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab The \u8220"\u8634 ? Refresh\u8221" button in the popup forces a fresh snapshot pull and a full re-scan of the current tab.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab If you\u8217've just registered a piece of content and want to confirm it\u8217's visible \u8212- wait the typical 5-50 min beta latency, then {\b reload the tab + Refresh} to see the result immediately.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This is {\b not} a bug \u8212- it\u8217's a deliberate consequence of operating on a public blockchain with snapshot-based caching for performance.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 6. Harvest mode (advanced \u8212- publisher batch tool)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 For publishers who post multiple items in a session (e.g., a content creator publishing a series of posts on a topic), Harvest collects candidate content from the current tab for batch registration.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 How to use\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab Publish your content on the channel (with KT-tokens embedded as in \u167 ?3).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab Open the HB popup \u8594 ? click \u8220"\u9935 ? Harvest\u8221".\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab HB scans the current tab and lists candidate items with visible KT-tokens.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab Select the items you want to register.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab Register the batch \u8212- HB processes each in sequence and reports per-item status.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Harvest is especially useful for:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Multi-tweet threads\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Sequential LinkedIn posts\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Bulk-publishing content creators\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Coordinated multi-item publishing sessions\sa180\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 7. Supported platforms\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Web-only \u8212- important\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 {\b HB works only on the WEB versions of the platforms listed below \u8212- these apps when accessed through a desktop or laptop browser. HB does NOT work on mobile smartphone apps. This is by technical and security design.}\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The golden rule for smartphone users:\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 {\b If you want to verify or register content while using a smartphone, switch to a desktop or laptop, open the relevant platform\u8217's website in a Chromium-based browser (Chrome, Edge, Opera, Brave, etc.) with HB installed, log in there, and use the web version.}\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The native mobile apps of these platforms (the X app, the Facebook app, the WhatsApp / Telegram / Messenger phone apps, the Gmail mobile app, etc.) are not covered and will not be covered by HB \u8212- mobile browsers on phones currently have limited or no compatible extension support, and native mobile apps are not Chromium browsers.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Browser support\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB is a Chromium browser extension and works identically across all Chromium-based desktop/laptop browsers, including:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Google Chrome\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Microsoft Edge\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Opera\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Brave\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Vivaldi\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab \u8230 ?and other Chromium-based browsers\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 You can install HB from the corresponding browser store (Chrome Web Store, Edge Add-ons, Opera Add-ons, etc.) when listed there, or \u8212- if not yet listed for your browser \u8212- as an unpacked extension from the GitHub repository (see Install in the {\field{\*\fldinst{HYPERLINK "../README.md"}}{\fldrslt{\ul
+README
+}}}
+).\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Platform table\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB scans visible text on {\b any} web page for KickTech tokens. The table below details the special handling for each major web platform.\par}
+{
+\trowd \trgaph120
+\clbrdrb\brdrs\cellx2160\clbrdrb\brdrs\cellx4320\clbrdrb\brdrs\cellx6480\clbrdrb\brdrs\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Platform (web)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Scanning\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Special handling\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Beta limitations\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Gmail (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Sender + body text + links\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Sender-domain authorization check; suspicious-link banners; Forward-to-Verify CTA\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Personal Gmail; Workspace policies may interact\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b X / Twitter (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Posts, replies, quote-tweets\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition; keyed-HMAC author anti-spoof on timeline posts (handle never on-chain in clear \u8212- see PRIVACY.md \u167 ?10.2)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Lazy-loaded threads may take a moment to badge after scroll\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b LinkedIn (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Feed posts, articles, comments\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition; keyed-HMAC author anti-spoof on personal feed / profile posts (handle never on-chain in clear)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Articles render slightly differently \u8212- may require Refresh\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Facebook (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Public posts, comments\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition; keyed-HMAC author anti-spoof on wall / profile posts (handle never on-chain in clear)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Pages with heavy lazy-loading may need scroll + Refresh\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Telegram (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Posts, channels, direct messages\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition in chat history\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Telegram Desktop and mobile apps not covered (web only)\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b WhatsApp (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Direct messages, group chats\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition in messages\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 WhatsApp mobile app not covered (web only)\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Messenger (web)}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Direct messages\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Limited to web client\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Generic web pages}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Any visible text on the page\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Token recognition only \u8212- no platform-specific anti-spoof\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Works on blogs, news sites, government pages, any HTTP/HTTPS content\par}
+\cell}
+}
+\intbl\row}
+{\pard \ql \f0 \sa180 \li0 \fi0 \par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 How per-platform anti-spoofing works\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The core text-based verification works on all listed platforms. For {\b person-publication surfaces} \u8212- X timeline posts, LinkedIn personal feed and profile posts, Facebook wall and profile posts \u8212- HB performs a keyed-HMAC check that binds the registration to the post\u8217's author. The author handle is never written to the chain in clear: only a server-keyed HMAC is on-chain, and the verifying handle is sent in the verification request body only (over TLS, not logged, not stored). See PRIVACY.md \u167 ?10.2 for the full mechanism, including how cryptographic erasure of an author marker works.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 For {\b non-person surfaces} (DMs, group / channel / conversation IDs, organization slugs, provider-domain patterns), no author handle is involved; a structurally simpler identifier-match handles the same anti-spoof role.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Additional DOM-structure heuristics that detect subtler kinds of impersonation continue to be added incrementally over the beta period.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 8. Anti-spoof use-cases \u8212- real benefits\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Concrete scenarios where HB provides a useful signal that wasn\u8217't previously available \u8212- framed around {\b ordinary people on social media and messengers}, which is the natural HB use-case. For institutional / high-trust scenarios, see \u167 ?9 and \u167 ?12.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 8.1 Your post copied to an impersonator account with a malicious image\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b The scenario} \u8212- You publish a popular post on X or Facebook (a tutorial, an opinion piece, a recipe). You include a KT-token; you registered it via HB. An attacker copies your text VERBATIM, {\i including the KT-token}, to their lookalike account (or a fresh new account that scrapes your photo as the avatar). The text alone hashes identically to yours. To monetize the impersonation, the attacker drops in an additional element \u8212- for example, a thumbnail image that, when clicked, leads to a phishing site.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Without HB} \u8212- Readers may encounter the impersonator\u8217's post first (it\u8217's a different account, but with a similar handle and your photo). They trust the content because the text is identical to yours, click the image, get phished.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b With HB} \u8212- On your original post (on your correctly-registered account), readers see the \u55357 ?\u56420 ? badge. On the impersonator\u8217's copy, the text-hash matches the registration record, but the publishing context differs. On X timeline, LinkedIn personal, and Facebook wall \u8212- where this use-case actually lives \u8212- HB checks the impersonator\u8217's visible handle against the registration\u8217's keyed-HMAC author marker; it does not match, and HB shows a {\b warning badge} (\u8220"content registered, but publication location does not match the registered publisher\u8221"). The author handle stays off the chain in clear; only an HMAC is on-chain, and the verifying handle is never logged or stored. The reader gets a clear signal that this isn\u8217't the original publisher\u8217's post.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Real benefit} \u8212- Defends against \u8220"verbatim copy + malicious overlay\u8221" \u8212- a phishing pattern that exploits the reader\u8217's habit of recognizing familiar text.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 8.2 Your content reposted with tampered details\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b The scenario} \u8212- You publish a thoughtful post on social with specific details (a recipe, the steps of a tutorial, a how-to article, a personal experience description). Someone copies your text but subtly alters key details \u8212- changes a step in the recipe, swaps a number in your figures, modifies an attribution.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Without HB} \u8212- Followers seeing the altered version don\u8217't realize it differs from your original. The modified version spreads, sometimes faster than your original.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b With HB} \u8212- Your original shows the \u55357 ?\u56420 ? badge. The altered repost shows {\b no badge} \u8212- the modified text produces a different hash. The mismatch is a clear visual signal that this isn\u8217't your original published version.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Real benefit} \u8212- Defends against \u8220"tactical misquoting\u8221" \u8212- a common form of misinformation, harder to detect than outright fabrication.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 8.3 Phishing email defense (Gmail-specific)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b The scenario} \u8212- You receive an email purportedly from a service you use (an online shop, a subscription site, a payment service) with a link to \u8220"update your details\u8221" or \u8220"confirm your account\u8221". The sender address looks legitimate; the formatting is right; there\u8217's a sense of urgency.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Without HB} \u8212- You inspect the sender address, hover over links, may or may not notice the underlying domain is suspicious.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b With HB} \u8212- HB checks: is the sender domain authorized? Are the links in this email going to known-authorized destinations? If suspicious links are detected, HB displays an in-Gmail warning banner. You can then forward the email (unchanged) to {\f1 verify@kicktech.io} for human review, and receive an automated reply indicating whether the destination domain belongs to the sender\u8217's authorized list.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Real benefit} \u8212- Replaces the unreliable hover-and-inspect habit with a deterministic check.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 8.4 Marketplace / classifieds listing fraud\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b The scenario} \u8212- You list an item for sale on a social marketplace (e.g., Facebook Marketplace) with photos and a description. You include a KT-token and register the listing. Someone copies your listing verbatim \u8212- same item, same description, same KT-token \u8212- to their account, changing only the contact details to direct buyers to their phishing/scam channel.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Without HB} \u8212- Buyers seeing the copy can\u8217't easily tell whose listing is the real one. The visible text is identical to yours.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b With HB} \u8212- Your original shows the \u55357 ?\u56420 ? badge. The copy shows a {\b warning badge} (on Facebook wall the keyed-HMAC author check is implemented) or no badge on simpler surfaces, because the publishing context doesn\u8217't match your registered identity. Buyers have a clear signal of which listing is the genuine one.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Real benefit} \u8212- Adds an authentication signal to peer-to-peer commerce, where impersonation is a common fraud vector.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 9. HB vs the full KTOR ecosystem \u8212- what HB does NOT do\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB is the lightweight, popular-use tier of KickTech\u8217's origin-registry family. There are deliberate limits to what HB does, and where it ends, the broader KTOR ecosystem (see \u167 ?12) takes over.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 What HB does not do\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No identity verification of registrants.} HB does not verify who you are when you register. Anyone with the extension installed can register any text on their own account. The \u55357 ?\u56420 ? badge confirms that {\i a particular account holder} deliberately registered content via HB \u8212- it does NOT confirm that the account holder is who they claim to be in a legal, institutional, or organizational sense.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No image-content registration.} HB registers text hashes only. If a post contains an image important to the content authenticity (a logo, a signed document, a chart), the image is not part of HB\u8217's authentication.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No signature/footer-block hashing.} HB does not register or check structured signature blocks (e.g., an institutional email footer with letterhead and contact details).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No issuer authentication for institutional accounts.} HB does not have a process where institutions (banks, government agencies, news organizations) can prove they are who they claim to be.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Implications \u8212- and why we deliberately keep HB this way\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab HB is excellent for {\b ordinary social-media and messenger use}. Your friends, followers, and contacts trust the \u55357 ?\u56420 ? badge on your posts as a signal that the post is genuinely yours, on your account, unedited.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab HB is {\b deliberately NOT suitable as an \u8220"officialness\u8221" certification} for institutional communications. A user who creates a fake account named \u8220"Bank XYZ\u8221" and uses HB on that fake account to register a fake announcement would technically produce a \u55357 ?\u56420 ? badge on their fake post \u8212- because HB has no way to verify they aren\u8217't actually Bank XYZ. {\b This is precisely why HB is not positioned for, and should not be used as, institutional authentication.} Doing so would create a misleading trust signal exploitable for discrediting genuine institutions.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 For institutional, banking, public-administration, news-organization, and critical-infrastructure use, see \u167 ?12 (KTOR Premium and KTOOR), which add the missing layers \u8212- issuer authentication, image-content and signature-block hashing, organizational workflows \u8212- that HB intentionally omits.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Coexistence with the full KTOR ecosystem\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB and the full KTOR ecosystem coexist without conflict. A user with both HB and a KTOR extension installed will, in certain cases, see {\b two different attestations} on the same content simultaneously \u8212- one from HB (popular-tier text authentication, account-level) and one from KTOR (full institutional authentication, including issuer verification and possibly image/signature blocks). The two attestations cover different verification scopes and complement each other rather than competing.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 10. Privacy in depth\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This section explains exactly what data leaves your browser, when, and why.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Local-only data\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Stored in your browser, never transmitted:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Per-installation cryptographic seed} \u8212- created locally on first install; used to derive your rotating KT-tokens. Never sent to KickTech or anyone else.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Recent verification cache} \u8212- to avoid re-querying the registry for the same content during a browsing session.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b UI preferences} \u8212- theme, layout settings.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 What leaves your browser (and when)\par}
+{
+\trowd \trgaph120
+\clbrdrb\brdrs\cellx2160\clbrdrb\brdrs\cellx4320\clbrdrb\brdrs\cellx6480\clbrdrb\brdrs\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Direction\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 When\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 What\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Why\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Outbound \u8212- verify\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 On every page scan that finds a KT-token\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A short hash of the content + the token\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To check the on-chain registry for a match\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Outbound \u8212- register\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Only when you click \u8220"Register\u8221" in the popup\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A hash of the content + your token + your publisher-channel context (either a non-personal identifier \u8212- group / conversation / organization / provider \u8212- or, for person-publication surfaces, a keyed HMAC of your author handle from which the handle cannot be recovered; see PRIVACY.md \u167 ?10.2)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To create the on-chain registration\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Outbound \u8212- verify-HMAC\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Only on person-publication surfaces with a registered HMAC marker, after the content hash has already matched\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The candidate author handle visible in the page URL\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To check whether the page\u8217's author matches the registration. Sent in the request body only (never URL/query) over TLS; the endpoint does not log or store the handle and returns only a yes/no answer\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Outbound \u8212- health\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Every 60 seconds\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A heartbeat to the gateway\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To detect service outages and show a status indicator\par}
+\cell}
+}
+\intbl\row}
+{\pard \ql \f0 \sa180 \li0 \fi0 \par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 What does NOT leave your browser\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Original text} \u8212- only one-way hashes are transmitted, never the source text. A hash cannot be reversed to reconstruct the text.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Email addresses} \u8212- HB reads sender addresses in Gmail for the authorization check, but does not store or transmit them.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Browsing history} \u8212- HB has no concept of \u8220"history\u8221". It scans only the currently-visible page on demand.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b IP-derived data on the application side} \u8212- the HB backend application reads zero request IPs. Rate-limiting is performed at the network edge (Vercel Firewall) without storing IP-derived data in HB systems.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Why we can make these claims\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The built extension code ({\f1 dist/}) is published in this repository for independent audit \u8212- readable JavaScript identical to what your browser runs. The GDPR-critical cryptographic core of the backend (keyed-HMAC author marker per {\field{\*\fldinst{HYPERLINK "../PRIVACY.md"}}{\fldrslt{\ul
+PRIVACY.md
+}}}
+ \u167 ?10.2) is published as a public audit reference at {\f1 audit-references/backend/hmac.ts}. The full Backend behavior \u8212- particularly the zero-IP-on-application-side guarantee \u8212- is documented in the architecture notes available on request and can be reviewed by qualified third-party auditors under NDA. The on-chain registry is by definition public and auditable.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 The full Privacy Policy is at {\field{\*\fldinst{HYPERLINK "https://www.kicktech.io/privacy"}}{\fldrslt{\ul
+www.kicktech.io/privacy
+}}}
+.\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 11. Beta program\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Current state\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Test blockchain} \u8212- registrations are made on Base Sepolia (Base\u8217's test network), not Base mainnet. This is honest beta: real cryptography, real network behavior, real on-chain transactions, but on a test chain so no real-money exposure.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Free} \u8212- registrations cost nothing during beta. As infrastructure scales and we move to mainnet, registration packages will be available (a free tier for individuals is expected to remain).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Throughput limits} \u8212- the gateway and registration endpoint are rate-limited to protect against abuse:\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab Per-session: ~5 registrations per 5-minute window, ~15 per hour.\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab Per-IP (network edge): 10 registrations per 5-minute window.\sa180\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Congestion handling} \u8212- during traffic spikes, you may see \u8220"service busy, try again in a moment\u8221" responses. This is expected; retry after a few seconds.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Snapshot latency} \u8212- 5 to 50 minutes between successful registration and visible badge for all readers.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Roadmap\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Mainnet migration} \u8212- planned after Phase 0 stability is demonstrated.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Special beta-testing focus: Facebook, Messenger, and X.} These platforms are already listed as supported (see \u167 ?7), but their dynamic content patterns and DOM-structure variability mean a substantially larger volume of real-world coverage data than current beta has produced is needed before they can be considered fully battle-tested. {\b Reports from beta testers using these platforms at scale are particularly valuable.} Keyed-HMAC author anti-spoofing for X timeline, LinkedIn personal, and Facebook wall is implemented; further DOM-structure heuristics for edge cases continue to be added as data comes in.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Mobile apps} \u8212- out of scope. The technical and security reasons for the desktop-Chromium-only design are described in \u167 ?7.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Reporting issues\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Beta feedback, bug reports, questions} \u8212- {\field{\*\fldinst{HYPERLINK "../../issues"}}{\fldrslt{\ul
+open an issue
+}}}
+ on this repository.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Privacy / security concerns} \u8212- see {\field{\*\fldinst{HYPERLINK "../SECURITY.md"}}{\fldrslt{\ul
+SECURITY.md
+}}}
+ for responsible-disclosure procedures.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b General contact} \u8212- {\field{\*\fldinst{HYPERLINK "https://www.kicktech.io"}}{\fldrslt{\ul
+www.kicktech.io
+}}}
+.\sa180\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 12. The KTOR ecosystem\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HumanBadge is one component of the broader {\b KickTech Origin Registry (KTOR)} family \u8212- specifically, its consumer / popular tier. The full family has three components, structured by audience and capability.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Components\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 \bullet \tx360\tab {\b HumanBadge (HB)} \u8212- this extension. The lightweight, popular-use tier for individual social-media and messenger users. Free during beta. No identity verification of registrants (see \u167 ?9). Text hashing only.\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 \bullet \tx360\tab {\b KTOR Premium} \u8212- the full-featured registry infrastructure for companies, public institutions, and government agencies. Designed for organizational-scale registration workflows. KTOR Premium adds, on top of HB\u8217's capabilities:\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab {\b Issuer authentication.} Institutions go through a verified-identity process before their registrations carry the institutional-trust signal \u8212- so a Premium-attested post from \u8220"Bank X\u8221" actually reflects that Bank X has been vetted, not just that someone holds an account named \u8220"Bank X\u8221".\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab {\b Image-content hash registration.} Logos, official imagery, and identifying visual elements are hashed alongside text \u8212- authenticating not just the body of a post but also its visual identity.\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab {\b Signature/footer-block hashing.} Institutional letterheads and signature blocks are hashed as separate elements, so even a partial copy that preserves the body but tampers with the signature is detected.\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab Per-publisher anti-spoof tuning, editorial and compliance workflows, integration with content-management systems and institutional security policies, service-level agreements for snapshot latency and availability, integration support.\par}
+{\pard \ql \f0 \sa0 \li720 \fi-360 \endash \tx360\tab Covered by contractual arrangements (not consumer self-service).\sa180\par}
+{\pard \ql \f0 \sa180 \li360 \fi-360 \bullet \tx360\tab {\b KTOOR \u8212- KickTech Origin Open Registry.} A subset of KTOR offered {\b pro bono in narrow scope} to selected large state institutions, banks, and critical-infrastructure operators \u8212- by KickTech invitation, with bounded scope \u8212- for the purpose of testing the use-case of protecting their clients and citizens from fraud that currently slips through existing state-run reporting systems (such as Polish CERT and the 8080 anti-fraud SMS line). KTOOR participation is governed by a specific agreement covering scope, duration, and reporting.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Image- and signature-block hashing \u8212- a KTOR/KTOOR feature, not HB\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A distinguishing feature of the full KTOR ecosystem (Premium and KTOOR) is the registration of {\b image-content hashes} and {\b signature/footer-block hashes} alongside text. HB intentionally does not include these \u8212- HB is the text-focused popular tier. It is possible that future HB versions may add a simplified form of image-block recognition; this is {\b not} in the current beta roadmap.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Complementing state-run systems\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 KTOR is designed to {\b complement}, not replace, existing state-run reporting and alert systems. Examples for Poland:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b CERT Polska} \u8212- the national CERT for cyber threats.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b 8080 (anti-fraud SMS line)} \u8212- citizens forward suspicious SMS to 8080 for analysis.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 These systems excel at threat reporting and post-incident response. KTOR adds the {\b inverse} signal: a publisher-anchored, on-chain authentication that lets citizens see {\i \u8220"this is the genuine version\u8221"} rather than only {\i \u8220"this is suspicious\u8221"}. The intent is to slot into existing fraud-prevention workflows, not to compete with them.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Coexistence with HB\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB and the full KTOR ecosystem run side by side. A user with both extensions installed will, in certain cases, see {\b two different attestations} on the same content \u8212- one from HB (popular-tier, text, account-level) and one from KTOR (full institutional, including issuer verification and image/signature blocks). The attestations cover different verification scopes and complement each other.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Inquiries\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Institutional partnerships, KTOR Premium services, KTOOR pro-bono inquiries} \u8212- {\field{\*\fldinst{HYPERLINK "https://www.kicktech.io"}}{\fldrslt{\ul
+www.kicktech.io
+}}}
+.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Consumer questions} \u8212- see beta feedback channels in \u167 ?11.\sa180\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 13. Glossary\par}
+{
+\trowd \trgaph120
+\clbrdrb\brdrs\cellx4320\clbrdrb\brdrs\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Term\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Meaning\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b KT-token}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A short authentication token of the form {\f1 KT-XXXXXX}, derived from a per-installation seed and the current 10-minute time window. Rotates automatically.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b KTOR}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 KickTech Origin Registry \u8212- the umbrella family of services for content authenticity, comprising HB, KTOR Premium, and KTOOR.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b HB}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 HumanBadge, this extension. The lightweight, popular-use tier of KTOR. No identity verification of registrants; text hashing only.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b KTOR Premium}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The full-featured institutional tier of KTOR. Includes verified-issuer authentication, image-content and signature-block hash registration, organizational workflows, SLAs, integration support. For companies, public institutions, and government agencies. Contractual.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b KTOOR}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 KickTech Origin Open Registry. A subset of KTOR offered pro bono in narrow scope to selected large state institutions, banks, and critical-infrastructure operators by KickTech invitation, for testing protection use-cases against fraud passing through existing state-run reporting systems.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Issuer authentication}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A process (specific to KTOR Premium and KTOOR, not present in HB) where institutional registrants prove verified identity before their registrations carry the institutional-trust signal.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Hash}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A one-way cryptographic fingerprint. Two identical inputs produce the same hash; any change produces a completely different hash. Cannot be reversed to reconstruct the original.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b On-chain}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Recorded on a public blockchain (Base Sepolia during beta). Anyone can audit on-chain data.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b SimHash}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A similarity-preserving hashing scheme used to fingerprint visible text in a way that is robust to minor formatting differences but sensitive to content edits.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Snapshot}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The gateway\u8217's locally-cached view of the on-chain registry, refreshed periodically. Trades a small amount of latency for substantial performance gains.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Proof of action}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The principle that HB attests to a specific publishing act by a specific account holder at a specific moment \u8212- not to the publisher\u8217's identity, humanity, or institutional officialness.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Keyed HMAC}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A one-way function {\f1 HMAC-SHA256(K, value)} that produces a 256-bit fingerprint from which the original {\f1 value} cannot be recovered without the secret key {\f1 K}. HB uses a keyed HMAC of the author handle, with a fresh per-registration {\f1 K} held server-side, to bind person-publication registrations to their author without writing the handle on-chain in clear. See PRIVACY.md \u167 ?10.2.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Cryptographic erasure}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A way of honoring the GDPR right to erasure (Art. 17) in systems where the underlying storage is immutable (like a public blockchain). Instead of deleting the on-chain entry \u8212- which is impossible \u8212- the secret key that makes the on-chain value meaningful is deleted, rendering the on-chain value permanently irreversible. HB uses this to erase author-handle HMAC markers on request. See PRIVACY.md \u167 ?9.2a and \u167 ?10.2.\par}
+\cell}
+}
+\intbl\row}
+{\pard \ql \f0 \sa180 \li0 \fi0 \par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 14. Where to learn more\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b README} \u8212- {\field{\*\fldinst{HYPERLINK "../README.md"}}{\fldrslt{\ul
+{\f1 README.md}
+}}}
+ \u8212- high-level overview, install, browser support.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b License} \u8212- {\field{\*\fldinst{HYPERLINK "../LICENSE"}}{\fldrslt{\ul
+{\f1 LICENSE}
+}}}
+ \u8212- source-available terms.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Security disclosure} \u8212- {\field{\*\fldinst{HYPERLINK "../SECURITY.md"}}{\fldrslt{\ul
+{\f1 SECURITY.md}
+}}}
+ \u8212- responsible-disclosure procedures.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Privacy policy} \u8212- {\field{\*\fldinst{HYPERLINK "https://www.kicktech.io/privacy"}}{\fldrslt{\ul
+www.kicktech.io/privacy
+}}}
+ \u8212- full legal text.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b KickTech main site} \u8212- {\field{\*\fldinst{HYPERLINK "https://www.kicktech.io"}}{\fldrslt{\ul
+www.kicktech.io
+}}}
+ \u8212- KTOR ecosystem, Premium and KTOOR inquiries, contact.\sa180\par}
+{\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \u169 ? KickTech. All rights reserved beyond the source-available license terms.\par}
+}
