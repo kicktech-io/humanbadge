@@ -113,7 +113,7 @@ function $(id) {
 function _hbIsPersonPublication(source, url) {
   const u = String(url || "");
   if (u.indexOf("/company/") !== -1) return false;
-  return source === "X-TWEET-SIMHASH" || source === "LINKEDIN-FEED-SIMHASH" || source === "LINKEDIN-PROFILE-SIMHASH" || source === "LINKEDIN-URL-SIMHASH" || source === "FACEBOOK-TEXT-SIMHASH";
+  return source === "X-TWEET-SIMHASH" || source === "LINKEDIN-FEED-SIMHASH" || source === "LINKEDIN-PROFILE-SIMHASH" || source === "LINKEDIN-URL-SIMHASH" || source === "LINKEDIN-PULSE-SIMHASH" || source === "LINKEDIN-COMMENT-SIMHASH" || source === "FACEBOOK-TEXT-SIMHASH";
 }
 function _hbSourceToPlatform(source) {
   if (!source) return "other";
@@ -660,7 +660,7 @@ function renderHarvest(data) {
       const txtBadge = document.createElement("span");
       txtBadge.className = "harvest-badge-hdr";
       txtBadge.style.cssText = "background:rgba(91,141,239,.15); color:#5b8def; border-color:rgba(91,141,239,.3);";
-      txtBadge.textContent = img.source === "TELEGRAM-TEXT-SIMHASH" ? "TELEGRAM TEXT" : img.source === "MESSENGER-TEXT-SIMHASH" ? "MESSENGER TEXT" : img.source === "WHATSAPP-TEXT-SIMHASH" ? "WHATSAPP TEXT" : img.source === "X-TWEET-SIMHASH" ? "X TWEET" : img.source === "X-DM-SIMHASH" ? "X DM" : img.source === "LINKEDIN-FEED-SIMHASH" ? "LINKEDIN FEED" : img.source === "LINKEDIN-URL-SIMHASH" ? "LINKEDIN POST" : img.source === "LINKEDIN-PROFILE-SIMHASH" ? "LINKEDIN PROFILE" : img.source === "LINKEDIN-MSG-SIMHASH" ? "LINKEDIN DM" : img.source === "FACEBOOK-TEXT-SIMHASH" ? "FACEBOOK TEXT" : img.source === "SOCIAL-TEXT-SIMHASH" ? "SOCIAL TEXT" : img.source === "TEXT-SIMHASH" ? "WEB TEXT" : img.source === "EMAIL-SIGNATURE" ? "EMAIL SIGNATURE" : "EMAIL TEXT";
+      txtBadge.textContent = img.source === "TELEGRAM-TEXT-SIMHASH" ? "TELEGRAM TEXT" : img.source === "MESSENGER-TEXT-SIMHASH" ? "MESSENGER TEXT" : img.source === "WHATSAPP-TEXT-SIMHASH" ? "WHATSAPP TEXT" : img.source === "X-TWEET-SIMHASH" ? "X TWEET" : img.source === "X-DM-SIMHASH" ? "X DM" : img.source === "LINKEDIN-FEED-SIMHASH" ? "LINKEDIN FEED" : img.source === "LINKEDIN-URL-SIMHASH" ? "LINKEDIN POST" : img.source === "LINKEDIN-PROFILE-SIMHASH" ? "LINKEDIN PROFILE" : img.source === "LINKEDIN-PULSE-SIMHASH" ? "LINKEDIN ARTICLE" : img.source === "LINKEDIN-COMMENT-SIMHASH" ? "LINKEDIN COMMENT" : img.source === "LINKEDIN-MSG-SIMHASH" ? "LINKEDIN DM" : img.source === "FACEBOOK-TEXT-SIMHASH" ? "FACEBOOK TEXT" : img.source === "SOCIAL-TEXT-SIMHASH" ? "SOCIAL TEXT" : img.source === "TEXT-SIMHASH" ? "WEB TEXT" : img.source === "EMAIL-SIGNATURE" ? "EMAIL SIGNATURE" : "EMAIL TEXT";
       hashLine.appendChild(txtBadge);
     }
     const metaLine = document.createElement("div");

@@ -2844,6 +2844,63 @@ function scanLinkedInArticle() {
     skipPromotedCheck: true
   });
 }
+function getLinkedInCommentTokenEls() {
+  const out = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+  let el = walker.currentNode;
+  while (el) {
+    let own = "";
+    for (const n of el.childNodes) if (n.nodeType === 3) own += n.textContent;
+    if (KT_PREFIX_REGEX.test(own.trim())) out.push(el);
+    el = walker.nextNode();
+  }
+  return out;
+}
+function scanLinkedInComments() {
+  if (window.location.hostname !== "www.linkedin.com") return;
+  const path = window.location.pathname;
+  if (!path.startsWith("/feed/update/") && !path.startsWith("/posts/")) return;
+  const mainPostTextEl = document.querySelector("[data-testid='expandable-text-box']");
+  const tokenEls = getLinkedInCommentTokenEls();
+  if (!tokenEls.length) return;
+  const seenTokens = /* @__PURE__ */ new Set();
+  for (const el of tokenEls) {
+    const rawText = (el.innerText || el.textContent || "").trim();
+    if (!_hbHasKtPrefix(rawText)) continue;
+    const token = (rawText.match(KT_PREFIX_REGEX) || [])[0];
+    if (!token) continue;
+    const etb = el.closest("[data-testid='expandable-text-box']");
+    if (etb && etb === mainPostTextEl) continue;
+    if (seenTokens.has(token)) continue;
+    seenTokens.add(token);
+    if (rawText.length < 20) continue;
+    let authorUrl = null;
+    let node = el;
+    let depth = 0;
+    while (node && depth < 15) {
+      const links = node.querySelectorAll ? Array.from(node.querySelectorAll("a[href*='/in/'], a[href*='/company/']")) : [];
+      const outside = links.filter((a) => a.href && !el.contains(a) && !a.closest("nav, header, [role='navigation'], .global-nav"));
+      if (outside.length) {
+        authorUrl = outside[0].href;
+        break;
+      }
+      node = node.parentElement;
+      depth++;
+    }
+    if (!authorUrl) {
+      continue;
+    }
+    processLinkedInPost(el, {
+      textOverride: rawText,
+      authorUrlOverride: authorUrl,
+      sourceKind: "COMMENT",
+      logId: token,
+      anchorEl: el,
+      skipNestedCheck: true,
+      skipPromotedCheck: true
+    });
+  }
+}
 let ktLinkedInMsgObserver = null;
 const ktLinkedInMsgHashed = /* @__PURE__ */ new Set();
 const ktLinkedInMsgSeen = /* @__PURE__ */ new Set();
@@ -3325,6 +3382,9 @@ async function scanPage() {
   }
   if (window.location.hostname === "www.linkedin.com") {
     scanLinkedInArticle();
+  }
+  if (window.location.hostname === "www.linkedin.com") {
+    scanLinkedInComments();
   }
 }
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
