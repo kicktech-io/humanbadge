@@ -212,11 +212,8 @@ function pushVerification(entry) {
     (v) => v.imageUrl && entry.imageUrl && v.imageUrl === entry.imageUrl && v.issuerName === entry.issuerName || v.issuerName === entry.issuerName && v.assetLabel === entry.assetLabel && v.kind === entry.kind && v.imageUrl === entry.imageUrl
   );
   if (isDupe) {
-    D.log("  pushVerification SKIP (dedup):", entry.assetLabel, "imageUrl:", entry.imageUrl ? entry.imageUrl.slice(0, 60) : "null", "kind:", entry.kind);
-    D.log("  pushVerification existing entries:", pageVerifications.map((v) => v.assetLabel + "/" + v.kind + "/" + (v.imageUrl ? v.imageUrl.slice(0, 40) : "null")));
     return;
   }
-  D.log("  pushVerification ADD:", entry.assetLabel, "imageUrl:", entry.imageUrl ? entry.imageUrl.slice(0, 60) : "null", "kind:", entry.kind);
   pageVerifications.push(entry);
 }
 const observerConfig = {
@@ -239,10 +236,6 @@ const KT_LAZY_ATTRS = [
 ];
 const D = {
   scanCount: 0,
-  log: (...a) => void 0,
-  warn: (...a) => void 0,
-  grp: (label) => void 0,
-  end: () => void 0,
   url: (u) => u && u.length > 90 ? u.slice(0, 87) + "\u2026" : u || "\u2014"
 };
 let issuers = [];
@@ -250,29 +243,17 @@ async function loadIssuers() {
   return new Promise((resolve) => {
     chrome.runtime.sendMessage({ type: "GET_ISSUERS" }, (resp) => {
       if (chrome.runtime.lastError) {
-        D.warn("loadIssuers BLAD:", chrome.runtime.lastError.message);
         return resolve([]);
       }
       const n = resp?.issuers?.length ?? 0;
       const src = resp?.source || "?";
       const elapsed = resp?.elapsedMs;
-      D.log(
-        "loadIssuers OK ->",
-        n,
-        "issuer(s), zrodlo:",
-        src,
-        elapsed != null ? "(elapsed: " + elapsed + "ms)" : ""
-      );
       if (resp?.issuers?.length) {
         const dumpN = Math.min(3, resp.issuers.length);
         for (let i = 0; i < dumpN; i++) {
           const iss = resp.issuers[i];
-          D.log("  Issuer[" + i + ']: name="' + iss.name + '"  hashes=' + JSON.stringify(iss.logoHashes) + "  threshold=" + iss.threshold);
-          D.log("    domains:", JSON.stringify(iss.authorizedUrlPatterns));
-          D.log("    cdnRoots:", JSON.stringify(iss.authorizedCdnRoots));
         }
         if (resp.issuers.length > dumpN) {
-          D.log("  ... (+" + (resp.issuers.length - dumpN) + " more issuers \u2014 use popup \u2699 Issuers to inspect)");
         }
       }
       resolve(resp?.issuers || []);
@@ -364,7 +345,6 @@ const KT_FLOATING_ATTR = "data-kt-floating";
 function attachFloatingBadge(badge, issuerName, assetLabel) {
   const key = issuerName + ":" + assetLabel;
   if (document.querySelector("[" + KT_FLOATING_ATTR + '="' + CSS.escape(key) + '"]')) {
-    D.log("  [FLOAT] Already have floating badge for: " + key);
     return;
   }
   const wrapper = document.createElement("div");
@@ -381,7 +361,6 @@ function attachFloatingBadge(badge, issuerName, assetLabel) {
   badge.style.top = "";
   wrapper.appendChild(badge);
   document.body.appendChild(wrapper);
-  D.log("  [FLOAT] Floating badge attached for: " + key);
 }
 function isInShadowDom(el) {
   let node = el;
@@ -405,7 +384,6 @@ function _hbAttachPlaceholder(el, badge) {
 }
 function attachBadgeNearElement(el, badge, skipSizeCheck) {
   if (el.hasAttribute(KT_BADGED_ATTR)) {
-    D.log("  attachBadge SKIP (already badged)");
     return;
   }
   if (el.tagName === "IMG" && (window.location.hostname === "x.com" || window.location.hostname === "twitter.com") && !window.location.pathname.includes("/status/")) {
@@ -472,7 +450,6 @@ function decodeGmailProxyUrl(url) {
     if (hashIdx > 0) {
       const decoded = url.slice(hashIdx + 1);
       if (decoded.startsWith("http")) {
-        D.log("[PROXY] Decoded Gmail proxy: " + decoded.slice(0, 80));
         return decoded;
       }
     }
@@ -494,7 +471,6 @@ function getGmailSenderFromElement(bodyEl) {
   if (!el) return null;
   const addr = el.getAttribute("email") || el.getAttribute("data-hovercard-id") || el.textContent.trim() || null;
   if (addr && addr.includes("@")) {
-    D.log("[SENDER] From element container: " + addr);
     return addr;
   }
   return null;
@@ -504,8 +480,6 @@ function detectForwardedSender() {
   if (!bodyEl) return null;
   const text = bodyEl.innerText || bodyEl.textContent || "";
   const FWD_MARKER = /[-]{3,}\s*(Forwarded message|Forwarded msg|Przekazana wiadomo[sś][cć]|Przesłana wiadomo[sś][cć]|Przes[łl]ana wiadomo[sś][cć]|Oryginalna wiadomo[sś][cć]|Tre[sś][cć]\s+przekazanej\s+wiadomo[sś][cć]|Wiadomo[sś][cć]\s+przekazana|Fwd:|FW:|Odp\.:)\s*[-]{0,}/im;
-  D.log("[FWD-DETECT] text length:", text.length, "marker test:", FWD_MARKER.test(text));
-  D.log("[FWD-DETECT] text preview:", JSON.stringify(text.slice(0, 200)));
   if (!FWD_MARKER.test(text)) return null;
   const markerMatch = text.match(FWD_MARKER);
   const afterMarker = markerMatch ? text.slice(text.indexOf(markerMatch[0]) + markerMatch[0].length) : text;
@@ -513,16 +487,12 @@ function detectForwardedSender() {
   const rawHeaders = blankLine >= 0 ? afterMarker.slice(0, blankLine) : afterMarker.slice(0, 800);
   const bodyAfterHeaders = blankLine >= 0 ? afterMarker.slice(blankLine, blankLine + 800) : "";
   const searchBlock = rawHeaders + "\n" + bodyAfterHeaders;
-  D.log("[FWD-DETECT] headerBlock:", JSON.stringify(searchBlock.slice(0, 200)));
   const emailRE = /([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g;
   const hlines = searchBlock.split(/\r?\n/);
-  D.log("[FWD-DETECT] Od line search in", hlines.length, "lines");
   for (const line of hlines) {
     if (/^\s*(?:Od|From)\s*:/i.test(line)) {
       const emails = line.match(emailRE) || [];
-      D.log("[FWD-DETECT] Od/From line:", JSON.stringify(line.slice(0, 80)), "emails:", emails);
       if (emails.length > 0) {
-        D.log("[SENDER] Forward detected - original sender:", emails[0]);
         return emails[0];
       }
     }
@@ -531,7 +501,6 @@ function detectForwardedSender() {
     if (/^\s*(?:Return-Path|Delivered-To)\s*:/i.test(line)) {
       const emails = line.match(emailRE) || [];
       if (emails.length > 0 && !emails[0].includes("bounce") && !emails[0].includes("bounces")) {
-        D.log("[SENDER] Forward detected (Return-Path) - original sender:", emails[0]);
         return emails[0];
       }
     }
@@ -567,10 +536,8 @@ function extractForwardedBodyEl(bodyEl) {
     }
     const len = (synth.textContent || "").trim().length;
     if (len < 20) return null;
-    D.log("[FWD] Extracted forwarded body: " + len + " chars");
     return synth;
   } catch (e) {
-    D.warn("[FWD] extractForwardedBodyEl failed: " + e.message);
     return null;
   }
 }
@@ -587,7 +554,6 @@ function getGmailSender() {
     if (!el) continue;
     const addr = el.getAttribute("email") || el.getAttribute("data-hovercard-id") || el.textContent.trim() || null;
     if (addr && addr.includes("@")) {
-      D.log("[SENDER] Found in container " + i + ": " + addr);
       return addr;
     }
   }
@@ -595,7 +561,6 @@ function getGmailSender() {
   for (let i = allSenders.length - 1; i >= 0; i--) {
     const addr = allSenders[i].getAttribute("email");
     if (addr && addr.includes("@")) {
-      D.log("[SENDER] Fallback last [email] attr: " + addr);
       return addr;
     }
   }
@@ -661,7 +626,6 @@ function extractGmailBodyText() {
     if (quote) {
       const quoteText = quote.innerText || quote.textContent || "";
       if (quoteText.length > best.length * 0.4 && quoteText.length > 50) {
-        D.log("[TEXT-VERIFY] Using .gmail_quote content (" + quoteText.length + " chars vs total " + best.length + ")");
         return quoteText;
       }
     }
@@ -684,7 +648,6 @@ async function scanGmailLinks() {
   const allLinks = Array.from(bodyEl.querySelectorAll("a[href]"));
   const imgLinkSet = new Set(filteredImgLinks);
   const links = [...filteredImgLinks, ...allLinks.filter((a) => !imgLinkSet.has(a))];
-  D.log("[LINKS] image-wrapped links:", filteredImgLinks.length, "total links:", allLinks.length);
   const SKIP = /^(mailto:|#|javascript:|tel:)/i;
   const SKIP_DOMAIN = /(google\.com|gstatic\.com|gmail\.com|googleusercontent\.com|accounts\.google)/i;
   const PUBLIC_INSTITUTION_DOMAIN = /^(m\.st|ms\.gov\.pl|krs\.com\.pl|ekrs\.ms\.gov\.pl|sejm\.gov\.pl|nbp\.pl|uodo\.gov\.pl|uokik\.gov\.pl)$/i;
@@ -706,16 +669,12 @@ async function scanGmailLinks() {
       if (ANTIVIRUS_DOMAIN.test(bare)) continue;
       const isImgLink = imgLinkSet.has(a);
       if (!hasVerifiedIssuer && !isImgLink) continue;
-      D.log("[LINKS] adding domain:", bare, isImgLink ? "(image link)" : "");
       externalDomains.add(bare);
     } catch (e) {
-      D.log("[LINKS] skip href error:", e.message);
       continue;
     }
   }
-  D.log("[LINKS] externalDomains size:", externalDomains.size, [...externalDomains]);
   if (externalDomains.size === 0) {
-    D.log("[LINK-CHECK] No external links found in email, imgLinks:", imgLinks.length);
     if (imgLinks.length === 0) return;
     for (const a of filteredImgLinks) {
       const href = a.getAttribute("href") || "";
@@ -724,52 +683,38 @@ async function scanGmailLinks() {
         const parts = host.split(".");
         const reg = parts.slice(-2).join(".");
         externalDomains.add(reg);
-        D.log("[LINK-CHECK] Force-added img link domain:", reg);
       } catch {
       }
     }
     if (externalDomains.size === 0) return;
   }
-  D.log("[LINK-CHECK] External link domains: " + [...externalDomains].join(", "));
-  D.log("[LINKS] pageVerifications:", pageVerifications.length, "verifiedIssuers:", verifiedIssuers);
-  D.log("[LINKS] all verifications kinds:", pageVerifications.map((v) => v.kind + "/" + v.issuerName));
-  D.log("[LINKS] _ktFwdBodyEl:", !!window._ktFwdBodyEl, "links found:", Array.from(bodyEl.querySelectorAll("a[href]")).length);
   if (!hasVerifiedIssuer && filteredImgLinks.length === 0) {
-    D.log("[LINKS] No verified issuers and no image links \u2014 skip");
     return;
   }
   if (!hasVerifiedIssuer) {
-    D.log("[LINKS] No verified issuer \u2014 checking image-wrapped links only (" + filteredImgLinks.length + ")");
   }
   const _allHrefs = Array.from(bodyEl.querySelectorAll("a[href]")).map((a) => a.getAttribute("href")).filter((h) => h && !h.startsWith("mailto:") && !h.startsWith("#"));
-  D.log("[LINKS] all hrefs:", _allHrefs.slice(0, 10));
   const authorizedPatterns = [];
   for (const iss of issuers) {
     if (verifiedIssuers.includes(iss.name)) {
       authorizedPatterns.push(...iss.authorizedUrlPatterns || []);
     }
   }
-  D.log("[LINKS] authorizedPatterns:", authorizedPatterns);
   const unauthorizedDomains = [...externalDomains].filter((domain) => {
     const auth = isSenderDomainAuthorized(domain, authorizedPatterns);
-    D.log("[LINKS] domain:", domain, "authorized:", auth);
     return !auth;
   });
-  D.log("[LINKS] unauthorizedDomains:", unauthorizedDomains);
   const RELAY_PATTERN = /^(emailing|newsletter|tracking|click|links|go\.|mailing|kampanie|email\.|send\.|dispatch\.|r\d*\.|urldefense\.proofpoint\.|proofpoint\.|safelinks\.protection\.outlook\.|na\.protection\.sophos\.|linkprotect\.cudasvc\.)/i;
   const relayDomains = [...externalDomains].filter((d) => RELAY_PATTERN.test(d));
   const plainUnauthorized = unauthorizedDomains.filter((d) => !RELAY_PATTERN.test(d));
   if (unauthorizedDomains.length === 0 && relayDomains.length === 0) {
-    D.log("[LINK-CHECK] All links authorized \u2705");
     return;
   }
   const unauthorizedRelayDomains = relayDomains.filter((d) => !isSenderDomainAuthorized(d, authorizedPatterns));
   if (plainUnauthorized.length === 0 && unauthorizedRelayDomains.length === 0) {
-    D.log("[LINK-CHECK] All relay domains are authorized subdomains \u2705 (" + relayDomains.join(", ") + ")");
     return;
   }
   const warnRelayDomains = unauthorizedRelayDomains;
-  D.log("[LINK-CHECK] \u26A0\uFE0F Unauthorized: " + plainUnauthorized.join(", ") + " | Relay (unauthorized): " + warnRelayDomains.join(", ") + " | Relay (authorized/ok): " + relayDomains.filter((d) => !warnRelayDomains.includes(d)).join(", "));
   let warningHtml;
   if (warnRelayDomains.length > 0) {
     const allSuspect = [...warnRelayDomains, ...plainUnauthorized];
@@ -793,16 +738,12 @@ async function scanGmailLinks() {
     ].join(";");
     warningBadge.innerHTML = warningHtml;
     const insertTarget = realBodyEl || bodyEl;
-    D.log("[LINKS] insertTarget:", !!insertTarget, "parentElement:", !!insertTarget?.parentElement, "existing warning:", insertTarget?.previousSibling?.classList?.contains("kt-link-warning"));
     if (!insertTarget?.previousSibling?.classList?.contains("kt-link-warning")) {
       if (insertTarget?.parentElement) {
         insertTarget.parentElement.insertBefore(warningBadge, insertTarget);
-        D.log("[LINKS] \u2705 Banner inserted");
       } else {
-        D.log("[LINKS] \u274C No parentElement for insertTarget");
       }
     } else {
-      D.log("[LINKS] Banner already present \u2014 skip");
     }
     pushVerification({
       kind: "warn",
@@ -838,9 +779,7 @@ async function scanGmailLinks() {
     if (!insertTarget2?.previousSibling?.classList?.contains("kt-link-warning")) {
       if (insertTarget2?.parentElement) {
         insertTarget2.parentElement.insertBefore(warningBadge, insertTarget2);
-        D.log("[LINKS] \u2705 Banner inserted (plain unauthorized)");
       } else {
-        D.log("[LINKS] \u274C No parentElement for plain unauthorized banner");
       }
     }
     pushVerification({
@@ -900,7 +839,6 @@ function extractGmailSignature() {
   if (gmailSig) {
     const t = (gmailSig.innerText || "").trim();
     if (t.length > 20) {
-      D.log("[SIGNATURE] Found .gmail_signature (" + t.length + " chars)");
       return { text: t, bodyEl };
     }
   }
@@ -917,7 +855,6 @@ function extractGmailSignature() {
       const blockStart = autoIdx - lookback.length + offset;
       const sigText = fullText2.slice(blockStart >= 0 ? blockStart : autoIdx).trim();
       if (sigText.length >= 40) {
-        D.log("[SIGNATURE] Strategy G auto-msg boundary (" + sigText.length + " chars): " + sigText.slice(0, 80));
         return { text: sigText, bodyEl };
       }
     }
@@ -935,53 +872,43 @@ function extractGmailSignature() {
       if (/^-{5,}$/.test(line) || /^={5,}$/.test(line)) {
         const afterLines = lines.slice(i + 1).join("\n").trim();
         if (afterLines.length >= 40) {
-          D.log("[SIGNATURE] Dashed separator boundary: " + afterLines.length + " chars");
           return { text: afterLines, bodyEl };
         }
       }
     }
     const firstHrB = bodyEl.querySelector("hr");
-    D.log("[SIGNATURE] B2 check: firstHrB=", !!firstHrB, "imgs.length=", imgs.length);
     if (firstHrB) {
       try {
         const hrRange2 = document.createRange();
         hrRange2.setStartAfter(firstHrB);
         hrRange2.setEndAfter(bodyEl.lastChild || bodyEl);
         const textAfterHr = hrRange2.toString().trim();
-        D.log("[SIGNATURE] B2 textAfterHr len=" + textAfterHr.length + " preview=" + JSON.stringify(textAfterHr.slice(0, 80)));
         if (textAfterHr.length >= 20) {
           const HR2_CO_START = /\b(Poczta\s+Polska|[A-ZŁŚĆŻŹ][\wąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+\s+(?:S\.A\.|Sp\.\s*z\s*o\.o))/;
           const HR2_CO_RE = /\b(S\.A\.|Sp\.\s*z|ul\.|NIP|KRS|siedzib|infolinia)/i;
           const window2 = textAfterHr.length > 600 ? textAfterHr.slice(-600) : textAfterHr;
           const matched = HR2_CO_RE.test(window2);
-          D.log("[SIGNATURE] B2 regex match=" + matched + " window preview=" + JSON.stringify(window2.slice(0, 80)));
           if (matched) {
             let startIdx = window2.search(HR2_CO_START);
             if (startIdx < 0) startIdx = window2.search(HR2_CO_RE);
             let trimmed = startIdx > 0 ? window2.slice(startIdx) : window2;
             trimmed = trimmed.replace(/(KRS:\s*\d+)[\s\r\n]+\1/gi, "$1").trim();
-            D.log("[SIGNATURE] Strategy B2 after-<hr> (" + trimmed.length + " chars): " + trimmed.slice(0, 80));
             return { text: trimmed, bodyEl };
           }
         }
       } catch (e) {
-        D.warn("[SIGNATURE] Strategy B2 Range failed: " + e.message);
       }
     }
-    D.log("[SIGNATURE] No images and no separator found \u2014 cannot detect boundary");
     return null;
   }
   const lastImg = imgs[imgs.length - 1];
-  D.log("[SIGNATURE] Boundary image: " + lastImg.src.slice(0, 80));
   let rangeText = "";
   try {
     const range = document.createRange();
     range.setStartAfter(lastImg);
     range.setEndAfter(bodyEl.lastChild || bodyEl);
     rangeText = GMAIL_UI_TOKENS.reduce((t, tok) => t.split(tok).join(""), range.toString()).trim();
-    D.log("[SIGNATURE] Range API: " + rangeText.length + " chars after last img");
   } catch (e) {
-    D.warn("[SIGNATURE] Range API failed: " + e.message);
   }
   const COMPANY_RE = /\b(KRS|REGON|NIP|S\.A\.|Sp\.|z\.o\.o|siedzib|kapita[łl]|zarejestrowana|rejestrowy|instytucj|zezwoleni|sp[oó][łl]k|VAT|Ltd\.|Inc\.|GmbH|BV\b|NV\b)\b/i;
   const hasCompanyContent = COMPANY_RE.test(rangeText);
@@ -1005,14 +932,12 @@ function extractGmailSignature() {
       if (footerStart >= 0) {
         const footerText = lines.slice(footerStart).join("\n").trim();
         if (footerText.length >= 40) {
-          D.log("[SIGNATURE] Trimmed range to footer start: " + footerText.length + " chars");
           return { text: footerText, bodyEl };
         }
       }
     }
     return { text: rangeText, bodyEl };
   }
-  D.log("[SIGNATURE] Range text insufficient (len=" + rangeText.length + " hasCompany=" + hasCompanyContent + ") \u2014 trying Strategy C");
   let pivot = lastImg;
   while (pivot.parentElement && pivot.parentElement !== bodyEl) {
     pivot = pivot.parentElement;
@@ -1027,7 +952,6 @@ function extractGmailSignature() {
   const sibText = parts.join("\n").trim();
   const sibHasCompany = /\b(KRS|REGON|NIP|S\.A\.|Sp\.|z\.o\.o|siedzib|kapita[łl]|zarejestrowana|rejestrowy|instytucj|zezwoleni|sp[oó][łl]k|VAT|Ltd\.|Inc\.|GmbH|S\.A\b|BV\b|NV\b)\b/i.test(sibText);
   if (sibText.length >= 80 && sibHasCompany) {
-    D.log("[SIGNATURE] Sibling strategy: " + sibText.length + " chars");
     return { text: sibText, bodyEl };
   }
   const fullText = getGmailBodyText(bodyEl);
@@ -1042,7 +966,6 @@ function extractGmailSignature() {
       }
       const sigText = sigLines.join("\n").trim();
       if (sigText.length >= 40) {
-        D.log("[SIGNATURE] Strategy C KRS/NIP boundary: " + sigText.length + " chars");
         return { text: sigText, bodyEl };
       }
     }
@@ -1071,12 +994,10 @@ function extractGmailSignature() {
         }
         const trimmed = window600.slice(blockStart).trim();
         if (trimmed.length >= 40) {
-          D.log("[SIGNATURE] Strategy D <hr>-boundary (" + trimmed.length + " chars): " + trimmed.slice(0, 80));
           return { text: trimmed, bodyEl };
         }
       }
     } catch (e) {
-      D.warn("[SIGNATURE] Strategy D Range failed: " + e.message);
     }
   }
   if (firstHr) {
@@ -1088,12 +1009,10 @@ function extractGmailSignature() {
       if (textAfterHr.length >= 20 && textAfterHr.length <= 600) {
         const HR2_CO_RE = /\b(S\.A\.|Sp\.\s*z|ul\.|NIP|KRS|siedzib|infolinia)/i;
         if (HR2_CO_RE.test(textAfterHr)) {
-          D.log("[SIGNATURE] Strategy D2 after-<hr> (" + textAfterHr.length + " chars): " + textAfterHr.slice(0, 80));
           return { text: textAfterHr, bodyEl };
         }
       }
     } catch (e) {
-      D.warn("[SIGNATURE] Strategy D2 Range failed: " + e.message);
     }
   }
   {
@@ -1115,7 +1034,6 @@ function extractGmailSignature() {
         const afterText = GMAIL_UI_TOKENS.reduce((t, tok) => t.split(tok).join(""), rawAfterText).trim();
         const looksLikeBody = /^(Witaj|Szanow|Dear|Hello|Hej|Cześć|Dzień dobry)/i.test(afterText);
         if (!looksLikeBody && afterText.length >= 20 && afterText.length <= 600 && PERSONAL_SIG_RE.test(afterText)) {
-          D.log("[SIGNATURE] Strategy E img-boundary (" + afterText.length + " chars): " + afterText.slice(0, 80));
           return { text: afterText, bodyEl };
         }
       } catch (e) {
@@ -1145,7 +1063,6 @@ function extractGmailSignature() {
         const sigText = sigLines.join("\n").trim();
         const hasCompanyContent2 = /\b(UAB|Ltd\.?|GmbH|Inc\.?|Corp\.?|S\.A\.|PLC|LLC|SARL|Financial Conduct|authoris|regulat|licens|zezwoleni|regulacj|AG|SE|Private\s+Limited|Pte\.?\s*Ltd)\b/i.test(sigText);
         if (sigText.length >= 40 && hasCompanyContent2) {
-          D.log("[SIGNATURE] Strategy F \xA9 / foreign company boundary (" + sigText.length + " chars): " + sigText.slice(0, 80));
           return { text: sigText, bodyEl };
         }
       }
@@ -1174,7 +1091,6 @@ function extractGmailSignature() {
       }
       const sigText = fullText2.slice(blockStart >= 0 ? blockStart : teamIdx).trim();
       if (sigText.length >= 40) {
-        D.log("[SIGNATURE] Strategy H Zesp[\xF3\u0142] anchor (" + sigText.length + " chars): " + sigText.slice(0, 80));
         return { text: sigText, bodyEl };
       }
     }
@@ -1195,7 +1111,6 @@ function extractGmailSignature() {
       const blockStart = svcIdx - maxLook + offset;
       const sigText = fullText2.slice(blockStart >= 0 ? blockStart : svcIdx).trim();
       if (sigText.length >= 40) {
-        D.log("[SIGNATURE] Strategy I Customer Service anchor (" + sigText.length + " chars): " + sigText.slice(0, 80));
         return { text: sigText, bodyEl };
       }
     }
@@ -1245,7 +1160,6 @@ function extractGmailSignature() {
         }
         const sigText = fullText2.slice(cut).trim();
         if (sigText.length >= 10 && sigText.length <= 600) {
-          D.log("[SIGNATURE] Strategy F2/J2 text-footer (" + sigText.length + " chars): " + sigText.slice(0, 80));
           return { text: sigText, bodyEl };
         }
       }
@@ -1261,7 +1175,6 @@ function extractGmailSignature() {
         const sigLines = kLines.slice(i, i + 10);
         const sigText = sigLines.join("\n").trim();
         if (sigText.length >= 20 && ADDRESS_K.test(sigText)) {
-          D.log("[SIGNATURE] Strategy K closing+address (" + sigText.length + " chars): " + sigText.slice(0, 80));
           return { text: sigText, bodyEl };
         }
       }
@@ -1341,29 +1254,22 @@ function normalizeSignatureForHash(text) {
   return t;
 }
 async function scanGmailSignature() {
-  D.log("[SIG-VERIFY] Scanning for email signature...");
   const sigResult = extractGmailSignature();
   if (!sigResult) {
-    D.log("[SIG-VERIFY] No signature found");
     return;
   }
   const { text: sigText, bodyEl: sigBodyEl } = sigResult;
   if (!sigText || sigText.length < 20) {
-    D.log("[SIG-VERIFY] Signature too short (" + sigText.length + " chars)");
     return;
   }
-  D.log("[SIG-VERIFY] Signature extracted: " + sigText.length + " chars: " + sigText.slice(0, 100));
   if (!_hbHasKtPrefix(sigText)) {
-    D.log("[SIG-VERIFY] skip \u2014 signature does not start with HB token");
     return;
   }
   const sigNorm = normalizeSignatureForHash(sigText);
   const sigHash = simHash(sigNorm);
   if (!sigHash) {
-    D.log("[SIG-VERIFY] SimHash null (signature too short after normalization)");
     return;
   }
-  D.log("[SIG-VERIFY] SimHash: " + sigHash);
   if (!pageHarvest.some((h) => h.hash === sigHash)) {
     pageHarvest.push({
       hash: sigHash,
@@ -1387,12 +1293,10 @@ async function scanGmailSignature() {
     (iss) => (iss.assetLabel || "").toUpperCase().startsWith("[SIGNATURE]") || (iss.assetLabel || "").toUpperCase().startsWith("[SIG]") || (iss.assetLabel || "").startsWith("[HUMAN] ")
   );
   if (!sigIssuers.length) {
-    D.log("[SIG-VERIFY] No [SIGNATURE] assets in registry \u2014 hash harvested, skipping match");
     return;
   }
   const senderEmail = detectForwardedSender() || getGmailSenderFromElement(sigBodyEl) || getGmailSender();
   const senderDomain = senderEmail ? senderEmail.split("@")[1] || "" : "";
-  D.log("[SIG-VERIFY] Sender resolved: " + senderEmail);
   let bestMatch = null, bestPriority = 3, bestDist = 999;
   for (const issuer2 of sigIssuers) {
     const threshold = issuer2.threshold ?? 8;
@@ -1402,9 +1306,6 @@ async function scanGmailSignature() {
     }));
     const best = distances.sort((a, b) => a.dist - b.dist)[0];
     if (best && best.dist <= threshold) {
-      D.log(
-        '  [SIG-VERIFY] vs "' + issuer2.name + '" (' + issuer2.assetLabel + "): hash=" + sigHash + " registered=" + best.registered + " dist=" + best.dist + " threshold=" + threshold + " MATCH=true"
-      );
     }
     if (!best || best.dist > threshold) continue;
     const patterns = issuer2.authorizedUrlPatterns || [];
@@ -1417,11 +1318,9 @@ async function scanGmailSignature() {
     }
   }
   if (!bestMatch) {
-    D.log("[SIG-VERIFY] No signature matches found");
     return;
   }
   const { issuer, domainTrusted } = bestMatch;
-  D.log('[SIG-VERIFY] MATCH: " + issuer.name + " domain=' + senderDomain + " trusted=" + domainTrusted);
   let shortLabel, kind, tipDesc;
   const _humanInfo = _hbDeriveHumanBadge(issuer, domainTrusted);
   if (_humanInfo) {
@@ -1457,23 +1356,17 @@ async function scanGmailSignature() {
   });
 }
 async function scanGmailText() {
-  D.log("[TEXT-VERIFY] Gmail text fallback: no image matches, trying SimHash...");
   const bodyText = stripThunderbirdFwdHeaders(extractGmailBodyText());
   if (!bodyText || bodyText.length < 30) {
-    D.log("[TEXT-VERIFY] Email body too short \u2014 skipping");
     return;
   }
-  D.log("[TEXT-VERIFY] Body extracted: " + bodyText.length + " chars");
   if (!_hbHasKtPrefix(bodyText)) {
-    D.log("[TEXT-VERIFY] skip \u2014 email body does not start with HB token");
     return;
   }
   const textHash = simHash(bodyText);
   if (!textHash) {
-    D.log("[TEXT-VERIFY] SimHash returned null (text too short after normalization)");
     return;
   }
-  D.log("[TEXT-VERIFY] SimHash: " + textHash);
   if (!pageHarvest.some((h) => h.hash === textHash)) {
     pageHarvest.push({
       hash: textHash,
@@ -1499,7 +1392,6 @@ async function scanGmailText() {
     (iss) => (iss.assetLabel || "").startsWith("[TEXT]") || (iss.assetLabel || "").startsWith("[TXT]") || (iss.assetLabel || "").startsWith("[HUMAN] ")
   );
   if (!textIssuers.length) {
-    D.log("[TEXT-VERIFY] No [TEXT] assets in registry \u2014 hash harvested, skipping match");
     return;
   }
   const senderEmail = getGmailSender();
@@ -1515,9 +1407,6 @@ async function scanGmailText() {
     }));
     const best = distances.sort((a, b) => a.dist - b.dist)[0];
     if (best && best.dist <= threshold) {
-      D.log(
-        '  [TEXT-VERIFY] vs "' + issuer2.name + '" (' + issuer2.assetLabel + "): obliczony=" + textHash + "  rejestrowany=" + best.registered + "  dist=" + best.dist + "  threshold=" + threshold + "  MATCH=true"
-      );
     }
     if (!best || best.dist > threshold) continue;
     const patterns = issuer2.authorizedUrlPatterns || [];
@@ -1530,13 +1419,9 @@ async function scanGmailText() {
     }
   }
   if (!bestMatch) {
-    D.log("[TEXT-VERIFY] No text hash matches found");
     return;
   }
   const { issuer, domainTrusted } = bestMatch;
-  D.log(
-    '[TEXT-VERIFY] MATCH: "' + issuer.name + '" domain=' + senderDomain + " trusted=" + domainTrusted
-  );
   let shortLabel, kind, tipDesc;
   const _humanInfo = _hbDeriveHumanBadge(issuer, domainTrusted);
   if (_humanInfo) {
@@ -1838,7 +1723,6 @@ function extractSocialPostText() {
       const t = cfg.customExtract().trim();
       if (t.length > 20) {
         text = t;
-        D.log("[SOCIAL-TEXT] Extracted via customExtract (pre-meta): " + text.length + " chars");
       }
     } catch (e) {
     }
@@ -1863,7 +1747,6 @@ function extractSocialPostText() {
         let metaText = colonIdx !== -1 ? raw.slice(colonIdx + 3).replace(/"$/, "").trim() : raw.indexOf(": ") !== -1 ? raw.slice(raw.indexOf(": ") + 2).trim() : raw;
         if (metaText && metaText.length > 20) {
           text = metaText;
-          D.log("[SOCIAL-TEXT] Extracted via meta (" + metaSelectors[0] + "): " + text.length + " chars");
         }
       }
     } catch (e) {
@@ -1877,7 +1760,6 @@ function extractSocialPostText() {
           const t = (el.innerText || el.textContent || "").trim();
           if (t.length > 20) {
             text = t;
-            D.log("[SOCIAL-TEXT] Extracted via '" + sel + "': " + t.length + " chars");
             break;
           }
         }
@@ -1888,7 +1770,6 @@ function extractSocialPostText() {
   if (text && cfg.softWallSignals) {
     const normalized = text.toLowerCase();
     if (cfg.softWallSignals.some((s) => normalized.includes(s))) {
-      D.warn("[SOCIAL-TEXT] Soft-wall detected \u2014 discarding: " + text.slice(0, 80));
       text = "";
     }
   }
@@ -1900,13 +1781,11 @@ function extractSocialPostText() {
       if (t && cfg.softWallSignals) {
         const norm = t.toLowerCase();
         if (cfg.softWallSignals.some((s) => norm.includes(s))) {
-          D.warn("[SOCIAL-TEXT] Soft-wall in fallback \u2014 discarding.");
           t = "";
         }
       }
       if (t) {
         text = t;
-        D.log("[SOCIAL-TEXT] Fallback (" + (fallbackSel || "article/main") + "): " + text.length + " chars");
       }
     }
   }
@@ -1968,7 +1847,6 @@ function processMessengerMessage(msgDiv) {
   const key = threadId + ":" + text;
   const hash = simHash(key);
   if (!hash) return;
-  D.log("[MESSENGER] hash threadId=" + threadId + " sender(diag)=" + sender.slice(0, 20) + " hash=" + hash + " text=" + text.slice(0, 50));
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
       hash,
@@ -2012,7 +1890,6 @@ function processMessengerMessage(msgDiv) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? hbT("msgr_ok") : hbT("msgr_unauth"));
-  D.log("[MESSENGER] MATCH dist=" + bestDist + " issuer=" + best.name + " asset=" + (best.assetLabel || "?") + " authorized=" + authorized);
   if (!msgDiv.hasAttribute(KT_BADGED_ATTR)) {
     msgDiv.setAttribute(KT_BADGED_ATTR, "1");
     setTimeout(() => {
@@ -2039,17 +1916,14 @@ function scanMessengerViewport() {
   if (host !== "www.facebook.com" && host !== "www.messenger.com") return;
   const threadId = messengerThreadId();
   if (!threadId) {
-    D.log("[MESSENGER] No thread ID in URL \u2014 skipping");
     return;
   }
   const panel = document.querySelector('[role="main"]');
   if (!panel) {
-    D.log("[MESSENGER] No [role='main'] panel found \u2014 skipping");
     return;
   }
   const fpSelector = "div[dir='auto']." + MESSENGER_MSG_CLASS_FP.join(".");
   const messages = Array.from(panel.querySelectorAll(fpSelector));
-  D.log("[MESSENGER] Found " + messages.length + " messages, threadId=" + threadId);
   if (!ktMessengerObserver) {
     ktMessengerObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -2069,7 +1943,6 @@ function scanMessengerViewport() {
       added++;
     }
   });
-  D.log("[MESSENGER] Observing " + added + " new messages");
   messages.forEach((msg) => {
     if (_hbInViewport(msg)) processMessengerMessage(msg);
   });
@@ -2158,7 +2031,6 @@ function processWhatsAppBubble(el) {
   const key = keyParts.join(":");
   const hash = simHash(key);
   if (!hash) return;
-  D.log("[WHATSAPP] hash chat=" + chatName.slice(0, 20) + " sender=" + sender.slice(0, 20) + " msg=" + msgId.slice(0, 8) + " hash=" + hash + " text=" + rawText.slice(0, 50));
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
       hash,
@@ -2202,7 +2074,6 @@ function processWhatsAppBubble(el) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? "Wiadomo\u015B\u0107 zweryfikowana \u2014 oryginalny post admina (WhatsApp)" : "Tre\u015B\u0107 rozpoznana, ale grupa nieautoryzowana (WhatsApp)");
-  D.log("[WHATSAPP] MATCH dist=" + bestDist + " issuer=" + best.name + " asset=" + (best.assetLabel || "?") + " chat=" + chatName.slice(0, 30) + " authorized=" + authorized);
   if (!el.hasAttribute(KT_BADGED_ATTR)) {
     el.setAttribute(KT_BADGED_ATTR, "1");
     setTimeout(() => {
@@ -2228,7 +2099,6 @@ function scanWhatsAppViewport() {
   const allBubbles = Array.from(document.querySelectorAll("[data-id]"));
   const bubbles = allBubbles.filter((b) => !b.querySelector('[data-virtualized="true"]'));
   const skipped = allBubbles.length - bubbles.length;
-  D.log("[WHATSAPP] Found " + bubbles.length + " rendered bubbles" + (skipped ? " (skipped " + skipped + " virtualized)" : ""));
   if (!ktWhatsAppObserver) {
     ktWhatsAppObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -2247,7 +2117,6 @@ function scanWhatsAppViewport() {
       added++;
     }
   });
-  D.log("[WHATSAPP] Observing " + added + " new bubbles");
   bubbles.forEach((b) => {
     if (_hbInViewport(b)) processWhatsAppBubble(b);
   });
@@ -2294,7 +2163,6 @@ function processXDMBubble(bubbleEl) {
   const hash = simHash(text);
   if (!hash) return;
   const permalink = "https://x.com/i/chat/" + convId;
-  D.log("[X-DM] convId=" + convId + " hash=" + hash + " text=" + text.slice(0, 50));
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
       hash,
@@ -2342,7 +2210,6 @@ function processXDMBubble(bubbleEl) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? "Wiadomo\u015B\u0107 zweryfikowana \u2014 orygina\u0142 w tej rozmowie (X)" : "Tre\u015B\u0107 rozpoznana, ale rozmowa nieautoryzowana (X)");
-  D.log("[X-DM] MATCH dist=" + bestDist + " issuer=" + best.name + " asset=" + (best.assetLabel || "?") + " convId=" + convId + " authorized=" + authorized);
   if (!bubbleEl.hasAttribute(KT_BADGED_ATTR)) {
     bubbleEl.setAttribute(KT_BADGED_ATTR, "1");
     setTimeout(() => {
@@ -2369,7 +2236,6 @@ function scanXDM() {
   const convId = xdmConversationId();
   if (!convId) return;
   const bubbles = Array.from(document.querySelectorAll('div[class*="rounded-2xl"]')).filter(_hbIsXDMBubble);
-  D.log("[X-DM] Found " + bubbles.length + " bubbles (conv " + convId + ")");
   if (!ktXDMObserver) {
     ktXDMObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -2394,7 +2260,6 @@ function scanXDM() {
       added++;
     }
   });
-  D.log("[X-DM] Observing " + added + " new bubbles");
   bubbles.forEach((b) => {
     if (_hbInViewport(b)) processXDMBubble(b);
   });
@@ -2423,7 +2288,6 @@ async function processXTweet(tweetEl) {
   if (!hash) return;
   const _xStatusLink = tweetEl.querySelector("a[href*='/status/']");
   const _xAuthorUrl = _xStatusLink?.href || window.location.href;
-  D.log("[X-TIMELINE] tweetId=" + tweetId + " hash=" + hash + " authorUrl=" + _xAuthorUrl + " text=" + rawText.slice(0, 50));
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
       hash,
@@ -2481,7 +2345,6 @@ async function processXTweet(tweetEl) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? "Tweet zweryfikowany \u2014 oryginalny post (X/Twitter)" : "Tre\u015B\u0107 rozpoznana, ale profil nieautoryzowany (X/Twitter)");
-  D.log("[X-TIMELINE] MATCH dist=" + bestDist + " issuer=" + best.name + " asset=" + (best.assetLabel || "?") + " authorUrl=" + authorUrl + " authorized=" + authorized);
   setTimeout(() => {
     if (!tweetEl.isConnected) return;
     const _badge = createBadge(label, kind, best.name, desc, best.assetLabel || "");
@@ -2503,7 +2366,6 @@ async function processXTweet(tweetEl) {
 function scanXTimeline() {
   if (window.location.hostname !== "x.com" && window.location.hostname !== "twitter.com") return;
   const tweets = Array.from(document.querySelectorAll("[data-testid='tweet']"));
-  D.log("[X-TIMELINE] Found " + tweets.length + " tweets");
   if (!ktXObserver) {
     ktXObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -2522,7 +2384,6 @@ function scanXTimeline() {
       added++;
     }
   });
-  D.log("[X-TIMELINE] Observing " + added + " new tweets");
   tweets.forEach((t) => {
     if (_hbInViewport(t)) processXTweet(t);
   });
@@ -2538,7 +2399,6 @@ function processTelegramBubble(bubble) {
   const msgId = bubble.dataset.messageId || (bubble.querySelector("[data-message-id]") || {}).dataset?.messageId || "";
   const chId = telegramChannelId();
   if (!msgId || !chId) {
-    D.log("[TELEGRAM] skip \u2014 no msgId or chId (bubble.id=" + bubble.id + ")");
     return;
   }
   const textIssuers = issuers.filter((i) => (i.assetLabel || "").startsWith("[TEXT]") || (i.assetLabel || "").startsWith("[TXT]") || (i.assetLabel || "").startsWith("[HUMAN] "));
@@ -2560,7 +2420,6 @@ function processTelegramBubble(bubble) {
     const key = chId + ":" + msgId + ":" + rawText;
     const hash = simHash(key);
     if (!hash) return;
-    D.log("[TELEGRAM] hash type=" + type + " msg=" + msgId + " hash=" + hash + " text=" + rawText.slice(0, 50));
     if (!pageHarvest.some((h) => h.hash === hash)) {
       pageHarvest.push({
         hash,
@@ -2604,7 +2463,6 @@ function processTelegramBubble(bubble) {
     const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
     const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
     const desc = _humanInfo?.tipDesc || (authorized ? "Wiadomo\u015B\u0107 zweryfikowana \u2014 oryginalny post admina (Telegram)" : "Tre\u015B\u0107 rozpoznana, ale kana\u0142 nieautoryzowany (Telegram)");
-    D.log("[TELEGRAM] MATCH dist=" + bestDist + " issuer=" + best.name);
     if (!bubble.hasAttribute(KT_BADGED_ATTR)) {
       bubble.setAttribute(KT_BADGED_ATTR, "1");
       setTimeout(() => {
@@ -2629,10 +2487,8 @@ function processTelegramBubble(bubble) {
 }
 function scanTelegramViewport() {
   if (!issuers.length) {
-    D.log("[TELEGRAM] No issuers yet \u2014 observer will retry when issuers load");
   }
   const bubbles = Array.from(document.querySelectorAll(".Message.message-list-item"));
-  D.log("[TELEGRAM] Found " + bubbles.length + " bubbles");
   if (!ktTelegramObserver) {
     ktTelegramObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -2651,7 +2507,6 @@ function scanTelegramViewport() {
       added++;
     }
   });
-  D.log("[TELEGRAM] Observing " + added + " new bubbles (total seen: " + ktTelegramSeen.size + ")");
   bubbles.forEach((b) => {
     if (_hbInViewport(b)) processTelegramBubble(b);
   });
@@ -2662,6 +2517,7 @@ const ktLinkedInSeen = /* @__PURE__ */ new Set();
 function isLinkedInFeedPage() {
   const path = window.location.pathname;
   if (path.startsWith("/messaging/")) return false;
+  if (path.startsWith("/pulse/")) return false;
   return true;
 }
 function isLinkedInMessagingPage() {
@@ -2712,7 +2568,7 @@ function isLinkedInNestedPost(postEl) {
   const parent = postEl.parentElement ? postEl.parentElement.closest('[data-urn^="urn:li:activity:"]') : null;
   return !!parent;
 }
-function getLinkedInPostAuthorUrl(postEl) {
+function getLinkedInPostAuthorUrl(postEl, textRef) {
   const candidates = [
     ".update-components-actor__meta-link",
     // primary (current LinkedIn)
@@ -2726,10 +2582,36 @@ function getLinkedInPostAuthorUrl(postEl) {
     const el = postEl.querySelector(sel);
     if (el && el.href) return el.href;
   }
+  const anchor = textRef || postEl;
+  if (anchor && anchor.compareDocumentPosition) {
+    const links = Array.from(document.querySelectorAll(
+      "a[href*='/in/'], a[href*='/company/']"
+    ));
+    let best = null;
+    for (const a of links) {
+      if (!a.href) continue;
+      if (a.closest("nav, header, [role='navigation'], .global-nav")) continue;
+      const before = anchor.compareDocumentPosition(a) & Node.DOCUMENT_POSITION_PRECEDING;
+      if (before) best = a;
+    }
+    if (best) return best.href;
+  }
+  let node = postEl, depth = 0;
+  while (node && depth < 12) {
+    const a = node.querySelector && node.querySelector(
+      "a[href*='/in/'], a[href*='/company/']"
+    );
+    if (a && a.href) return a.href;
+    node = node.parentElement;
+    depth++;
+  }
   return null;
 }
 function getLinkedInActivityIdFromUrl() {
-  const m = window.location.pathname.match(/\/posts\/[^\/]*-(\d{15,20})-[a-zA-Z0-9]+\/?/);
+  const p = window.location.pathname;
+  let m = p.match(/\/posts\/[^\/]*-(\d{15,20})-[a-zA-Z0-9]+\/?/);
+  if (m) return m[1];
+  m = p.match(/\/feed\/update\/urn:li:activity:(\d{15,20})\/?/);
   return m ? m[1] : "";
 }
 function getLinkedInUsernameFromUrl() {
@@ -2743,11 +2625,9 @@ async function processLinkedInPost(postEl, opts) {
   const logId = opts.logId || getLinkedInActivityId(postEl) || "unknown";
   if (isFeed && !getLinkedInActivityId(postEl)) return;
   if (!opts.skipNestedCheck && isLinkedInNestedPost(postEl)) {
-    D.log("[LINKEDIN-FEED] skip nested logId=" + logId);
     return;
   }
   if (!opts.skipPromotedCheck && isLinkedInPromotedPost(postEl)) {
-    D.log("[LINKEDIN-FEED] skip Promoted logId=" + logId);
     return;
   }
   const textIssuers = issuers.filter((i) => (i.assetLabel || "").startsWith("[TEXT]") || (i.assetLabel || "").startsWith("[TXT]") || (i.assetLabel || "").startsWith("[HUMAN] "));
@@ -2773,22 +2653,18 @@ async function processLinkedInPost(postEl, opts) {
       if (textEl) break;
     }
     if (!textEl) {
-      D.log("[LINKEDIN-FEED] no text element logId=" + logId);
       return;
     }
     rawText = (textEl.innerText || textEl.textContent || "").trim();
   }
   if (rawText.length < 20) {
-    D.log("[LINKEDIN-FEED] text too short (" + rawText.length + ") logId=" + logId);
     return;
   }
   if (!_hbHasKtPrefix(rawText)) {
-    D.log("[LINKEDIN-" + sourceKind + "] skip \u2014 no HB token prefix logId=" + logId);
     return;
   }
   const hash = simHash(rawText);
   if (!hash) return;
-  D.log("[LINKEDIN-" + sourceKind + "] logId=" + logId + " hash=" + hash + " text=" + rawText.slice(0, 50));
   const authorUrl = opts.authorUrlOverride || getLinkedInPostAuthorUrl(postEl) || window.location.href;
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
@@ -2846,7 +2722,6 @@ async function processLinkedInPost(postEl, opts) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? "Post zweryfikowany \u2014 oryginalny autor (LinkedIn)" : "Tre\u015B\u0107 rozpoznana, ale profil nieautoryzowany (LinkedIn)");
-  D.log("[LINKEDIN-" + sourceKind + "] MATCH dist=" + bestDist + " issuer=" + best.name + " authorUrl=" + authorUrl + " authorized=" + authorized);
   setTimeout(() => {
     if (!postEl.isConnected) return;
     const _badge = createBadge(label, kind, best.name, desc, best.assetLabel || "");
@@ -2869,7 +2744,12 @@ function scanLinkedInTimeline() {
   if (window.location.hostname !== "www.linkedin.com") return;
   if (!isLinkedInFeedPage()) return;
   const posts = Array.from(document.querySelectorAll('[data-urn^="urn:li:activity:"]'));
-  D.log("[LINKEDIN-FEED] Found " + posts.length + " posts");
+  const _path = window.location.pathname;
+  const _isSinglePostUrl = _path.startsWith("/posts/") || _path.startsWith("/feed/update/");
+  if (_isSinglePostUrl) {
+    scanLinkedInSinglePost();
+    return;
+  }
   if (posts.length > 0) {
     if (!ktLinkedInObserver) {
       ktLinkedInObserver = new IntersectionObserver((entries) => {
@@ -2891,38 +2771,75 @@ function scanLinkedInTimeline() {
       }
     });
     if (added > 0) {
-      D.log("[LINKEDIN-FEED] Observing " + added + " new posts (total seen: " + ktLinkedInSeen.size + ")");
     }
     posts.forEach((p) => {
       if (_hbInViewport(p)) processLinkedInPost(p);
     });
     return;
   }
-  if (!window.location.pathname.startsWith("/posts/")) return;
+}
+function scanLinkedInSinglePost() {
+  const path = window.location.pathname;
+  const isPostsUrl = path.startsWith("/posts/");
+  const isUpdateUrl = path.startsWith("/feed/update/");
+  if (!isPostsUrl && !isUpdateUrl) return;
   const activityId = getLinkedInActivityIdFromUrl();
   if (!activityId) {
-    D.log("[LINKEDIN-URL] could not parse activityId from URL: " + window.location.pathname);
     return;
   }
   const textEl = document.querySelector("[data-testid='expandable-text-box']");
   if (!textEl) {
-    D.log("[LINKEDIN-URL] no expandable-text-box yet \u2014 awaiting hydration");
     return;
   }
   const rawText = (textEl.innerText || textEl.textContent || "").trim();
   if (rawText.length < 20) {
-    D.log("[LINKEDIN-URL] text too short (" + rawText.length + ") activityId=" + activityId);
     return;
   }
-  const username = getLinkedInUsernameFromUrl();
-  const authorUrl = username ? "https://www.linkedin.com/in/" + username + "/" : window.location.href;
   const containerEl = textEl.closest("p") || textEl.parentElement || textEl;
+  let authorUrl;
+  if (isPostsUrl) {
+    const username = getLinkedInUsernameFromUrl();
+    authorUrl = username ? "https://www.linkedin.com/in/" + username + "/" : window.location.href;
+  } else {
+    authorUrl = getLinkedInPostAuthorUrl(containerEl, textEl) || window.location.href;
+    if (authorUrl === window.location.href) {
+    }
+  }
   processLinkedInPost(containerEl, {
     textOverride: rawText,
     authorUrlOverride: authorUrl,
     sourceKind: "URL",
     logId: activityId,
     anchorEl: textEl,
+    skipNestedCheck: true,
+    skipPromotedCheck: true
+  });
+}
+function isLinkedInArticlePage() {
+  return window.location.pathname.startsWith("/pulse/");
+}
+function scanLinkedInArticle() {
+  if (window.location.hostname !== "www.linkedin.com") return;
+  if (!isLinkedInArticlePage()) return;
+  const contentEl = document.querySelector(".reader-article-content");
+  if (!contentEl) {
+    return;
+  }
+  const rawText = (contentEl.innerText || contentEl.textContent || "").trim();
+  if (rawText.length < 20) {
+    return;
+  }
+  const authorUrl = getLinkedInPostAuthorUrl(contentEl, contentEl) || window.location.href;
+  if (authorUrl === window.location.href) {
+  }
+  const m = window.location.pathname.match(/-([a-z0-9]+)\/?$/i);
+  const logId = m ? m[1] : "pulse";
+  processLinkedInPost(contentEl, {
+    textOverride: rawText,
+    authorUrlOverride: authorUrl,
+    sourceKind: "PULSE",
+    logId,
+    anchorEl: contentEl,
     skipNestedCheck: true,
     skipPromotedCheck: true
   });
@@ -2937,7 +2854,6 @@ function processLinkedInMessage(itemEl) {
   const msgUrn = getLinkedInMessageUrn(itemEl);
   if (!msgUrn) return;
   const textIssuers = issuers.filter((i) => (i.assetLabel || "").startsWith("[TEXT]") || (i.assetLabel || "").startsWith("[TXT]") || (i.assetLabel || "").startsWith("[HUMAN] "));
-  D.log("[LINKEDIN-MSG] textIssuers=" + textIssuers.length + " / total=" + issuers.length + (textIssuers.length > 0 ? " \u2014 labels: " + textIssuers.slice(0, 5).map((i) => '"' + (i.assetLabel || "?").slice(0, 50) + '"').join(", ") : " (no [TEXT]/[TXT] assets in registry)"));
   if (window.__ktMsgHashProbe !== false) {
     const _txt = (itemEl.querySelector(".msg-s-event-listitem__body")?.innerText || itemEl.querySelector(".msg-s-event-listitem__body")?.textContent || "").trim();
     if (_txt.length >= 20) {
@@ -2948,30 +2864,24 @@ function processLinkedInMessage(itemEl) {
             (h) => h === _probeHash || h === "0x" + _probeHash || String(h).toLowerCase().replace(/^0x/, "") === _probeHash.toLowerCase()
           )
         );
-        D.log("[LINKEDIN-MSG] Hash probe '" + _probeHash + "': " + _matchingByHash.length + " issuer(s) have this hash in logoHashes");
         _matchingByHash.forEach((iss, i) => {
-          D.log("  [" + i + '] assetLabel="' + (iss.assetLabel || "(none)") + '" | startsWith([TEXT])=' + (iss.assetLabel || "").startsWith("[TEXT]") + " | logoHashes=" + JSON.stringify(iss.logoHashes) + " | threshold=" + iss.threshold + " | patterns=" + JSON.stringify((iss.authorizedUrlPatterns || []).slice(0, 2)));
         });
       }
     }
   }
   const textEl = itemEl.querySelector(".msg-s-event-listitem__body");
   if (!textEl) {
-    D.log("[LINKEDIN-MSG] no body element (likely system message) urn=" + msgUrn.slice(0, 60));
     return;
   }
   const rawText = (textEl.innerText || textEl.textContent || "").trim();
   if (rawText.length < 20) {
-    D.log("[LINKEDIN-MSG] text too short (" + rawText.length + ") urn=" + msgUrn.slice(0, 60));
     return;
   }
   if (!_hbHasKtPrefix(rawText)) {
-    D.log("[LINKEDIN-MSG] skip \u2014 no HB token prefix urn=" + msgUrn.slice(0, 60));
     return;
   }
   const hash = simHash(rawText);
   if (!hash) return;
-  D.log("[LINKEDIN-MSG] urn=" + msgUrn.slice(0, 60) + " hash=" + hash + " text=" + rawText.slice(0, 50));
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
       hash,
@@ -3019,7 +2929,6 @@ function processLinkedInMessage(itemEl) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? "Wiadomo\u015B\u0107 zweryfikowana \u2014 autoryzowana w tej konwersacji (LinkedIn)" : "Tre\u015B\u0107 rozpoznana, ale ta konwersacja nie jest autoryzowana (LinkedIn)");
-  D.log("[LINKEDIN-MSG] MATCH dist=" + bestDist + " issuer=" + best.name + " pageUrl=" + pageUrl + " authorized=" + authorized);
   if (!itemEl.hasAttribute(KT_BADGED_ATTR)) {
     itemEl.setAttribute(KT_BADGED_ATTR, "1");
     setTimeout(() => {
@@ -3045,7 +2954,6 @@ function scanLinkedInMessages() {
   if (window.location.hostname !== "www.linkedin.com") return;
   if (!isLinkedInMessagingPage()) return;
   const items = Array.from(document.querySelectorAll(".msg-s-event-listitem[data-event-urn]"));
-  D.log("[LINKEDIN-MSG] Found " + items.length + " messages");
   if (!ktLinkedInMsgObserver) {
     ktLinkedInMsgObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -3066,7 +2974,6 @@ function scanLinkedInMessages() {
     }
   });
   if (added > 0) {
-    D.log("[LINKEDIN-MSG] Observing " + added + " new messages (total seen: " + ktLinkedInMsgSeen.size + ")");
   }
   items.forEach((item) => {
     if (_hbInViewport(item)) processLinkedInMessage(item);
@@ -3080,17 +2987,14 @@ async function processLinkedInProfilePost(spanEl) {
   const activityId = getLinkedInProfileActivityId(spanEl);
   const rawText = (spanEl.innerText || spanEl.textContent || "").trim();
   if (rawText.length < 20) {
-    D.log("[LINKEDIN-PROFILE] text too short (" + rawText.length + "), activityId=" + activityId);
     return;
   }
   if (!_hbHasKtPrefix(rawText)) {
-    D.log("[LINKEDIN-PROFILE] skip \u2014 no HB token prefix activityId=" + activityId);
     return;
   }
   const textIssuers = issuers.filter((i) => (i.assetLabel || "").startsWith("[TEXT]") || (i.assetLabel || "").startsWith("[TXT]") || (i.assetLabel || "").startsWith("[HUMAN] "));
   const hash = simHash(rawText);
   if (!hash) return;
-  D.log("[LINKEDIN-PROFILE] activityId=" + activityId + " hash=" + hash + " text=" + rawText.slice(0, 50));
   const harvestKey = activityId ? "urn:li:activity:" + activityId : "text:" + rawText.slice(0, 40);
   if (!pageHarvest.some((h) => h.hash === hash)) {
     pageHarvest.push({
@@ -3146,7 +3050,6 @@ async function processLinkedInProfilePost(spanEl) {
   const kind = _humanInfo?.kind || (authorized ? "ok" : "bad");
   const label = _humanInfo?.shortLabel || (authorized ? "OK" : "!");
   const desc = _humanInfo?.tipDesc || (authorized ? "Post zweryfikowany - autoryzowany na profilu autora (LinkedIn)" : "Tresc rozpoznana, ale ten profil nie jest autoryzowany (LinkedIn)");
-  D.log("[LINKEDIN-PROFILE] MATCH dist=" + bestDist + " issuer=" + best.name + " pageUrl=" + pageUrl + " authorized=" + authorized);
   setTimeout(() => {
     if (!spanEl.isConnected) return;
     const _badge = createBadge(label, kind, best.name, desc, best.assetLabel || "");
@@ -3171,7 +3074,6 @@ function scanLinkedInProfile() {
     'li[data-testid="carousel-child-container"] [data-testid="expandable-text-box"]'
   ));
   const items = candidates.filter(isLinkedInPostExpandable);
-  D.log("[LINKEDIN-PROFILE] Found " + items.length + " posts (from " + candidates.length + " candidates in carousel scope)");
   if (!ktLinkedInProfileObserver) {
     ktLinkedInProfileObserver = new IntersectionObserver((entries) => {
       if (!_hbContextAlive()) return;
@@ -3193,7 +3095,6 @@ function scanLinkedInProfile() {
     }
   });
   if (added > 0) {
-    D.log("[LINKEDIN-PROFILE] Observing " + added + " new posts (total seen: " + ktLinkedInProfileSeen.size + ")");
   }
   items.forEach((item) => {
     if (_hbInViewport(item)) processLinkedInProfilePost(item);
@@ -3224,30 +3125,23 @@ async function scanSocialText() {
   if (SOCIAL_PLATFORMS_CONFIG[hostname].isTelegram) return;
   if (SOCIAL_PLATFORMS_CONFIG[hostname].isLinkedInFeed) return;
   if (SOCIAL_PLATFORMS_CONFIG[hostname].isX) return;
-  D.log("[SOCIAL-TEXT] Starting for: " + hostname);
   const textIssuers = issuers.filter((iss) => (iss.assetLabel || "").startsWith("[TEXT]") || (iss.assetLabel || "").startsWith("[TXT]") || (iss.assetLabel || "").startsWith("[HUMAN] "));
   if (!textIssuers.length) {
-    D.log("[SOCIAL-TEXT] No [TEXT] assets in registry \u2014 skipping");
     return;
   }
   const extracted = extractSocialPostText();
   if (!extracted) {
-    D.log("[SOCIAL-TEXT] No post text found on page");
     return;
   }
   const { text, label } = extracted;
   let badgeEl = extracted.badgeEl;
-  D.log("[SOCIAL-TEXT] Text (" + label + "): " + text.length + " chars");
   if (!_hbHasKtPrefix(text)) {
-    D.log("[SOCIAL-TEXT] skip \u2014 text does not start with HB token");
     return;
   }
   const textHash = simHash(text);
   if (!textHash) {
-    D.log("[SOCIAL-TEXT] SimHash null (text too short after normalization)");
     return;
   }
-  D.log("[SOCIAL-TEXT] SimHash: " + textHash);
   const _isFacebook = hostname === "www.facebook.com";
   const _fbPermalink = _isFacebook ? extractFacebookPermalink(badgeEl) : null;
   const _txtSource = _isFacebook ? "FACEBOOK-TEXT-SIMHASH" : "SOCIAL-TEXT-SIMHASH";
@@ -3281,16 +3175,12 @@ async function scanSocialText() {
     }));
     const best = distances.sort((a, b) => a.dist - b.dist)[0];
     if (best && best.dist <= threshold) {
-      D.log(
-        '  [SOCIAL-TEXT] vs "' + issuer2.name + '" (' + issuer2.assetLabel + "): hash=" + textHash + "  registered=" + best.registered + "  dist=" + best.dist + "  threshold=" + threshold + "  MATCH=true"
-      );
     }
     if (!best || best.dist > threshold) continue;
     const pageAuthorized2 = (issuer2.authorizedUrlPatterns || []).some(
       (p) => urlMatchesPattern(pageUrl, p)
     );
     if (best.dist === 0 && !pageAuthorized2) {
-      D.log("  [SOCIAL-TEXT] SKIP dist=0 collision (wrong page): " + issuer2.name);
       continue;
     }
     const prio = pageAuthorized2 ? 0 : 2;
@@ -3301,11 +3191,9 @@ async function scanSocialText() {
     }
   }
   if (!bestMatch) {
-    D.log("[SOCIAL-TEXT] No text hash matches found");
     return;
   }
   const { issuer, pageAuthorized } = bestMatch;
-  D.log('[SOCIAL-TEXT] MATCH: "' + issuer.name + '"  authorized=' + pageAuthorized);
   let shortLabel, kind, tipDesc;
   const _humanInfo = _hbDeriveHumanBadge(issuer, pageAuthorized);
   if (_humanInfo) {
@@ -3348,9 +3236,7 @@ async function scanSocialText() {
       }
     }
     if (badgeEl) {
-      D.log("[SOCIAL-TEXT] badgeEl found via last-resort fallback: " + badgeEl.tagName + " sel matched");
     } else {
-      D.warn("[SOCIAL-TEXT] badgeEl still null \u2014 badge will not be shown on page");
     }
   }
   if (badgeEl && !badgeEl.hasAttribute(KT_BADGED_ATTR)) {
@@ -3361,7 +3247,6 @@ async function scanSocialText() {
     if (hasPerPostContainer) {
       badgeEl.removeAttribute(KT_BADGED_ATTR);
       attachBadgeNearElement(badgeEl, _badge, true);
-      D.log("[SOCIAL-TEXT] Badge attached per-post (Facebook) on " + (badgeEl.tagName || "?"));
     } else {
       _badge.style.position = "fixed";
       _badge.style.left = "50%";
@@ -3369,7 +3254,6 @@ async function scanSocialText() {
       _badge.style.transform = "translate(-50%, -50%)";
       _badge.style.zIndex = "2147483647";
       document.body.appendChild(_badge);
-      D.log("[SOCIAL-TEXT] Badge placed at viewport center");
     }
   }
   pushVerification({
@@ -3387,25 +3271,18 @@ async function scanSocialText() {
 async function scanPage() {
   if (!_hbContextAlive()) return;
   D.scanCount++;
-  D.grp("== SCAN #" + D.scanCount + "  " + window.location.hostname + window.location.pathname.slice(0, 50) + " ==");
   pageHarvest.length = 0;
   await refreshHbToken();
-  D.log("[HB] current token: " + (_hbCurrentToken || "(none \u2014 SW dormant or rotation pending)"));
   if (!issuers.length) {
     if (KT_MESSAGING_HOSTS.has(window.location.hostname)) {
-      D.warn("Brak issuerow \u2013 scan bez weryfikacji (messaging app)");
     } else {
-      D.warn("Brak issuerow \u2013 scan przerwany");
-      D.end();
       return;
     }
   }
-  D.log("Issuerow zaladowanych: " + issuers.length);
   if (window.location.hostname === "mail.google.com") {
     const rawBodyEl = document.querySelector(".a3s.aiL") || document.querySelector(".ii.gt");
     const fwdBodyEl = rawBodyEl ? extractForwardedBodyEl(rawBodyEl) : null;
     if (fwdBodyEl) {
-      D.log("[FWD] Forward detected \u2014 scoping analysis to forwarded content");
       window._ktFwdBodyEl = fwdBodyEl;
     } else {
       window._ktFwdBodyEl = null;
@@ -3446,7 +3323,9 @@ async function scanPage() {
   if (window.location.hostname === "www.linkedin.com") {
     scanLinkedInProfile();
   }
-  D.end();
+  if (window.location.hostname === "www.linkedin.com") {
+    scanLinkedInArticle();
+  }
 }
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "GET_PAGE_STATUS") {
@@ -3492,7 +3371,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.type === "RESCAN") {
     (async () => {
-      D.log("[RESCAN] Full rescan requested by popup");
       document.querySelectorAll("[" + KT_ATTR + "]").forEach((el) => el.removeAttribute(KT_ATTR));
       document.querySelectorAll("[" + KT_BADGED_ATTR + "]").forEach((el) => el.removeAttribute(KT_BADGED_ATTR));
       document.querySelectorAll("[" + KT_BG_ATTR + "]").forEach((el) => el.removeAttribute(KT_BG_ATTR));
@@ -3528,21 +3406,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       pageUnmatched = 0;
       badgedHashes.clear();
       badgedIssuers.clear();
-      D.log("[RESCAN] \u2193 loadIssuers start");
       const _rescanT0 = Date.now();
       issuers = await loadIssuers();
-      D.log("[RESCAN] \u2191 loadIssuers done in " + (Date.now() - _rescanT0) + "ms (count: " + issuers.length + ")");
-      D.log("[RESCAN] Issuers reloaded:", issuers.length);
       await scanPage();
       if (window.location.hostname === "web.telegram.org" && issuers.length) {
-        D.log("[RESCAN] Force-processing visible Telegram bubbles with fresh issuers");
         document.querySelectorAll(".Message.message-list-item").forEach((b) => {
           const r = b.getBoundingClientRect();
           if (r.bottom > 0 && r.top < window.innerHeight) processTelegramBubble(b);
         });
       }
       if ((window.location.hostname === "www.facebook.com" || window.location.hostname === "www.messenger.com") && issuers.length) {
-        D.log("[RESCAN] Force-processing visible Messenger messages with fresh issuers");
         const panel = document.querySelector('[role="main"]');
         if (panel) {
           const fpSelector = "div[dir='auto']." + MESSENGER_MSG_CLASS_FP.join(".");
@@ -3553,21 +3426,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         }
       }
       if (window.location.hostname === "www.linkedin.com" && issuers.length) {
-        D.log("[RESCAN] Force-processing visible LinkedIn posts with fresh issuers");
         document.querySelectorAll('[data-urn^="urn:li:activity:"]').forEach((post) => {
           const r = post.getBoundingClientRect();
           if (r.bottom > 0 && r.top < window.innerHeight) processLinkedInPost(post);
         });
       }
       if (window.location.hostname === "www.linkedin.com" && window.location.pathname.startsWith("/messaging/thread/") && issuers.length) {
-        D.log("[RESCAN] Force-processing visible LinkedIn messages with fresh issuers");
         document.querySelectorAll(".msg-s-event-listitem[data-event-urn]").forEach((item) => {
           const r = item.getBoundingClientRect();
           if (r.bottom > 0 && r.top < window.innerHeight) processLinkedInMessage(item);
         });
       }
       if (window.location.hostname === "www.linkedin.com" && isLinkedInProfilePage() && issuers.length) {
-        D.log("[RESCAN] Force-processing visible LinkedIn profile posts with fresh issuers");
         document.querySelectorAll(
           'li[data-testid="carousel-child-container"] [data-testid="expandable-text-box"]'
         ).forEach((span) => {
@@ -3576,7 +3446,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
           if (r.bottom > 0 && r.top < window.innerHeight) processLinkedInProfilePost(span);
         });
       }
-      D.log("[RESCAN] Done \u2014 verifications:", pageVerifications.length);
       sendResponse({ ok: true, verifications: pageVerifications.length });
     })();
     return true;
@@ -3621,14 +3490,11 @@ setInterval(() => {
     pageUnmatched = 0;
     badgedHashes.clear();
     badgedIssuers.clear();
-    D.log("URL zmiana -> reset data-kt-checked + badge  new=" + cur.slice(0, 80));
   }
 }, 500);
 (async () => {
-  D.log("Init \u2013 " + window.location.href.slice(0, 80));
   issuers = await loadIssuers();
   if (!issuers.length && !KT_MESSAGING_HOSTS.has(window.location.hostname)) {
-    D.warn("Brak issuerow po loadIssuers \u2013 content.js wy\u0142\u0105cza si\u0119");
     return;
   }
   await scanPage();
@@ -3638,7 +3504,6 @@ setInterval(() => {
         if (!issuers.length) {
           await new Promise((resolve) => chrome.runtime.sendMessage({ type: "CLEAR_CACHE" }, resolve));
           issuers = await loadIssuers();
-          D.log("[MESSAGING] Auto-fetch: " + issuers.length + " issuers");
         }
         if (!issuers.length) return;
         await new Promise((resolve) => {
@@ -3664,7 +3529,6 @@ setInterval(() => {
             resolve();
           }, 800);
         });
-        D.log("[MESSAGING] DOM settled \u2014 processing visible bubbles");
         if (window.location.hostname === "web.telegram.org") {
           ktTelegramHashed.clear();
           document.querySelectorAll(".kt-badge[data-kt-source='text']").forEach((el) => el.remove());
@@ -3696,10 +3560,8 @@ setInterval(() => {
           });
         }
       } catch (e) {
-        D.warn("[MESSAGING] Auto-process failed:", e.message);
       }
     })();
   }
   observer.observe(document.body, observerConfig);
-  D.log("MutationObserver uruchomiony");
 })();

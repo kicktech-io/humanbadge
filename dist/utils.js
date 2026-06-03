@@ -25,6 +25,7 @@ function normalizeTextForHash(text) {
   t = t.replace(/&nbsp;/gi, " ");
   t = t.replace(/&[a-z]+;/gi, " ").replace(/&#x?[0-9a-f]+;/gi, " ");
   t = t.replace(/[\u200B\u200C\u200D\u200E\u200F\uFEFF\u00AD\u034F\u061C\u2060-\u2064\u2066-\u2069\u00A0]/g, " ");
+  t = t.replace(/(?:\r?\n|\s)*(?:…|\.{3})\s*(?:see\s+more|more|zobacz\s+więcej|więcej|wyświetl\s+więcej|czytaj\s+więcej)\s*$/i, "");
   t = t.replace(/-{3,}\s*(forwarded|przekazan|przesłan|oryginalna|wiadomość|message)[\s\S]{0,30}-{3,}/gi, " ");
   t = t.replace(/^[ \t]*(from|to|date|subject|cc|bcc|sent|od|do|data|temat|wysłano|nadawca|odbiorca)\s*:.*$/gim, " ");
   t = t.replace(/^(on |dnia |w dniu ).{10,80}(wrote|napisał|napisała):\s*$/gim, " ");
