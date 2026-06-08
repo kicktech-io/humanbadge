@@ -1,7 +1,12 @@
 # KickTech HumanBadge — Privacy Policy
 
-**Effective date:** 30th May 2026
-**Version:** 1.0
+**Effective date:** 8th June 2026
+**Version:** 1.1
+
+> **What changed in 1.1 (8 June 2026):** Author-handle HMAC keys (`K`) now carry
+> a sliding 30-day retention (refreshed on each verification, then auto-deleted)
+> and are encrypted at rest. See the retention tables and §9.2a (storage
+> limitation). No change to what data is collected or to your rights.
 
 ---
 
@@ -110,7 +115,7 @@ Some processors listed in §5 are based in the United States or operate globally
 | Verification queries (application level) | Not retained beyond the response cycle                 |
 | Verify-HMAC candidate handle             | Not logged or stored; used in memory for the comparison only (§10.2) |
 | Network-edge rate-limit counters         | Up to 1 hour (the longest rate-limit window)           |
-| Author-handle HMAC keys (`K`)            | Until the data subject requests erasure of that registration (§9.2a); deleting `K` cryptographically erases the on-chain marker |
+| Author-handle HMAC keys (`K`)            | **Sliding 30 days**, refreshed on each successful verification; auto-deleted 30 days after the last verification, or immediately on erasure request (§9.2a). Deleting `K` cryptographically erases the on-chain marker (§10.2) |
 | Registration requests (on-chain)         | **Permanent** — written to a public blockchain; see §8 |
 | Local browser data (seed, prefs, cache)  | Until you uninstall HB or clear your browser data      |
 | Service logs (anonymized, no IP)         | 90 days for operational and security troubleshooting |
@@ -146,7 +151,7 @@ Two categories of data in the HumanBadge processing flow meet the GDPR definitio
 | Category                                                      | Where it sits                  | Held by                                  | Retention                                                                                                    |
 | ------------------------------------------------------------- | ------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | **IP addresses** (used for rate-limiting at the network edge) | Vercel Firewall (network edge) | **Vercel** (as KickTech's sub-processor) | Rate-limit window only (up to 1 hour for the longest window); **never passed to the HumanBadge application** |
-| **Author handle** (for person-publication anti-spoofing) | Server-side as the per-registration HMAC key `K` (never the handle itself); on-chain only as `HMAC(K, handle)` | **KickTech** (key store) / **Upstash** (sub-processor hosting the store) | Until the data subject requests erasure of that registration; erasing `K` renders the on-chain HMAC permanently irreversible (cryptographic erasure — see §10.2) |
+| **Author handle** (for person-publication anti-spoofing) | Server-side as the per-registration HMAC key `K` (never the handle itself); on-chain only as `HMAC(K, handle)` | **KickTech** (key store) / **Upstash** (sub-processor hosting the store) | A sliding 30 days, refreshed on each successful verification, then auto-deleted; or immediately on erasure request. Erasing `K` renders the on-chain HMAC permanently irreversible (cryptographic erasure — see §10.2) |
 
 The author handle is processed only for person-publication surfaces (X timeline, LinkedIn profile/feed, Facebook wall/profile) where binding a registration to its author is necessary to prevent third parties from spoofing authorship. It is **never written to the chain in clear** — only as a keyed HMAC — and the handle itself is **not stored**; only the key `K` is held, so that the HMAC can be verified and, on request, cryptographically erased. The full mechanism, including the minimized verification data-flow, is documented in §10.2.
 
@@ -192,6 +197,8 @@ These rights concern the second category in §9.1: an author handle processed fo
 - **Right to data portability (Art. 20)** — Not meaningfully applicable: the stored item is a random key, not portable personal data authored by the data subject.
 
 - **Right to object (Art. 21)** — You may object to the anti-spoofing processing of your handle; the remedy is key erasure (Art. 17), after which no on-chain marker referencing you remains recoverable.
+
+- **Storage limitation (Art. 5(1)(e)) — automatic minimization.** Beyond on-request erasure, each key `K` carries a **sliding 30-day time-to-live**: it is automatically deleted 30 days after the last successful verification, and every verification refreshes the window. This is a deliberate minimization choice grounded in how the platforms are actually used: on social and messaging surfaces, human readers overwhelmingly engage with current content, and older items are rarely revisited by people (automated revisits, e.g. background screening, are not the audience the badge serves). A registration that is still being viewed is therefore re-verified well within 30 days and its key persists for as long as it is in use; a key that nobody verifies for 30 days — including the superseded key left behind when an author edits and re-registers content — is deleted automatically. The accepted trade-off is that an asset which no human views for 30 days will need re-registration to restore its badge. The net effect is that recoverable author-handle data is retained only while it is actively serving its purpose, and abandoned keys are swept without any additional tracking of who registered what.
 
 ### 9.3 Rights vis-à-vis Vercel as sub-processor
 
@@ -240,7 +247,7 @@ For person-publication surfaces where anti-spoofing requires binding the registr
 HumanBadge does **not** write such a handle in clear on-chain. Instead it writes a **keyed HMAC** of the handle (`x.com/hmac.<h>/*`, `linkedin.com/in/hmac.<h>/*`, etc.), where:
 
 - `<h>` is `HMAC-SHA256(K, handle)` — a 256-bit value from which the handle cannot be recovered or guessed without the key `K`;
-- `K` is a **fresh per-registration key** generated server-side and held only in KickTech's server-side store (the existing Upstash sub-processor — no new sub-processor is introduced);
+- `K` is a **fresh per-registration key** generated server-side and held only in KickTech's server-side store (the existing Upstash sub-processor — no new sub-processor is introduced). `K` is **encrypted at rest** (AES-256-GCM) under a key held separately from the store, so access to the store alone does not expose `K`. It is retained for a sliding 30 days, refreshed on each verification, then auto-deleted (see the retention tables and §9.2a);
 - the handle itself is **never** written to the chain.
 
 **Why this matters for erasure (Art. 17).** Because the on-chain value is a keyed HMAC and the key `K` lives off-chain under KickTech's control, erasing `K` renders `<h>` permanently irreversible — an opaque 32-byte string from which no handle can ever be derived, by anyone, including KickTech. This is **cryptographic erasure**: although the blockchain entry is immutable, deleting the key achieves the *effect* of erasure required by Art. 17. This approach follows guidance from CNIL and the EDPB on reconciling immutable ledgers with the right to erasure. A data subject exercising erasure of their author handle therefore has an effective remedy, despite the immutability of the underlying chain.

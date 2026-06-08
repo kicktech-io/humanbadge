@@ -62,7 +62,7 @@
 
 ### 7. Security measures (Annex II)
 
-- **Technical**: encryption in transit (TLS); architectural data minimization (zero-IP at application level — independently verifiable in the published HB source); hashing before transmission; access controls.
+- **Technical**: encryption in transit (TLS); encryption at rest for the author-handle HMAC keys (`K`, AES-256-GCM, under a key held separately from the key store); architectural data minimization (zero-IP at application level — independently verifiable from the published HumanBadge extension artifact and the public audit references); hashing before transmission; sliding 30-day retention with auto-deletion for `K`; access controls.
 - **Organizational**: documented access policies; periodic access reviews; security training for personnel with system access; incident-response procedures.
 - Cross-reference: `PRIVACY.md` §11.
 
