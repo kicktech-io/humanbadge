@@ -10,6 +10,8 @@ When you visit X (web), LinkedIn (web), Facebook (web), Telegram Web, WhatsApp W
 
 The principle is **proof of action**, not "proof of human". An attestation is a deliberate publishing act tied to a short-lived 10-minute rotating token: the publisher had to be at the keyboard, holding their account credentials, at the moment of registration. This is hard for bots to fake at scale. HB is **not a digital identity scheme** and does not fall under regulated digital-ID frameworks.
 
+A registered **Issuer** can additionally sign authorship cryptographically, so verified content appears under their organization tag — see [HB PLUS](#hb-plus--verified-issuer-attestations-beta).
+
 ## Beta notice
 
 HB is in beta on the Base Sepolia test blockchain. Expect:
@@ -37,6 +39,20 @@ Keyed-HMAC author anti-spoofing for X timeline, LinkedIn personal feed / profile
 
 The complete flow per platform — registration, verification, and anti-spoof use-cases — is described in the [technical instruction](docs/INSTRUCTION.md).
 
+## HB PLUS — verified-issuer attestations (beta)
+
+HB PLUS is a **separate sub-tier** of HumanBadge and an **MVP bridge toward KTOR Premium**. A registered **Issuer** can cryptographically sign authorship of exact content with their wallet (an EIP-712 signature, re-verified server-side against the on-chain issuer registry). When verified, the content carries the Issuer's **organization tag** instead of the generic badge — e.g. `👤 FAPL TEST` — and the on-chain label reads `[HUMAN] [FAPL TEST] …`. Editing the content still invalidates the badge, exactly as in regular HB.
+
+**What PLUS is — and is not:**
+
+- It is a **limited** form of verified-issuer attestation: cryptographic proof that the signer controls a wallet enrolled as an Issuer. It is the beta MVP of the issuer layer.
+- It is **not** the full KTOR Premium offering — no institutional vetting of the organization, no image-content or signature/footer-block registration, no editorial workflows, no SLAs. Those remain Premium (see [the bigger picture](#the-bigger-picture--hb-and-the-ktor-ecosystem)).
+- Regular (non-Issuer) **HB is unchanged**: account-level proof-of-action, with no registrant identity verification. PLUS adds an optional issuer layer on top.
+
+**Using PLUS (Issuers):** connect a wallet in the popup, then click Register on your content. The popup runs the normal anti-bot check, the wallet prompts for an EIP-712 signature (switching to Base Sepolia if needed), and the backend records the attestation under your org tag. Beta runs on Base Sepolia.
+
+**For everyone else:** nothing to do — you simply see the organization tag on content an Issuer has signed.
+
 ## Install
 
 **Browser support** — HB is a Chromium browser extension and works identically across all Chromium-based desktop/laptop browsers: Google Chrome, Microsoft Edge, Opera, Brave, Vivaldi, and others.
@@ -54,7 +70,7 @@ The complete flow per platform — registration, verification, and anti-spoof us
 
 ## Verification & transparency
 
-Every registration is recorded on a public blockchain (Base Sepolia during beta). There is **no private KickTech database** holding the truth — the truth is on-chain and anyone can audit it via the public block explorer. KT-tokens you see in this extension can be cross-checked against on-chain records independently.
+Every registration is recorded on a public blockchain (Base Sepolia during beta). There is **no private KickTech database** holding the truth — the truth is on-chain and anyone can audit it via the public block explorer. KT-tokens you see in this extension can be cross-checked against on-chain records independently. For HB PLUS, the on-chain label carries the Issuer's organization tag, and the exact-content SHA-256 is recorded in the asset's on-chain metadata.
 
 This repository is a **one-way published mirror** of the build artifact produced from KickTech's private development repository. Each release is published as a single clean commit with the corresponding tag.
 
@@ -65,7 +81,7 @@ HB does **not** collect or process personal data. Specifically:
 - No email addresses are read, stored, or transmitted.
 - No browsing history is recorded.
 - No page content is sent to KickTech servers without your explicit action.
-- The only outbound calls are: hash lookups to verify content against the public on-chain registry, and — when you click "Register" — the publishing action you authorize.
+- The only outbound calls are: hash lookups to verify content against the public on-chain registry, and — when you click "Register" — the publishing action you authorize. For HB PLUS that action additionally carries the content's SHA-256 (a hash, never the text) and your EIP-712 signature; the Issuer wallet address is a public on-chain identifier.
 
 Full policy: [www.kicktech.io/privacy](https://www.kicktech.io/privacy).
 
@@ -73,13 +89,15 @@ Full policy: [www.kicktech.io/privacy](https://www.kicktech.io/privacy).
 
 HumanBadge is the **lightweight, popular-use tier** of the broader **KickTech Origin Registry (KTOR)** ecosystem. The full family has three components, structured by audience and capability:
 
-- **HumanBadge (HB)** — this extension. For individual social-media and messenger users. Free for consumer use during beta; registration packages may become paid as infrastructure scales. **HB has no identity verification of registrants** — anyone can install HB and register anything on their own account. The 👤 badge confirms that a particular account holder deliberately registered the content; it does NOT confirm that the account holder is who they claim to be in a legal or institutional sense. HB is therefore deliberately not positioned for, and not suitable as, authentication of institutional, banking, government, or critical-infrastructure communications.
+- **HumanBadge (HB)** — this extension. For individual social-media and messenger users. Free for consumer use during beta; registration packages may become paid as infrastructure scales. **Base HB has no identity verification of registrants** — anyone can install HB and register anything on their own account. The 👤 badge confirms that a particular account holder deliberately registered the content; it does NOT confirm that the account holder is who they claim to be in a legal or institutional sense. Base HB is therefore deliberately not positioned for, and not suitable as, authentication of institutional, banking, government, or critical-infrastructure communications.
 
-- **KTOR Premium** — the full-featured tier for companies, public institutions, and government agencies. Designed for organizational-scale registration workflows. Adds the layers HB intentionally omits: verified-issuer authentication (so a Premium-attested post from "Bank X" reflects that Bank X has been vetted, not just that someone holds an account named "Bank X"), image-content and signature/footer-block hash registration, editorial workflows, integration with content-management systems and institutional security policies, SLAs. Covered by contractual arrangements.
+  **HB PLUS** (beta) sits on top as an optional sub-tier and an MVP bridge to Premium: a registered Issuer cryptographically signs content, which then displays under an organization tag. This is *limited* issuer verification — proof of control over an enrolled Issuer wallet — and is explicitly **not** the full institutional vetting of KTOR Premium.
+
+- **KTOR Premium** — the full-featured tier for companies, public institutions, and government agencies. Designed for organizational-scale registration workflows. It provides the **complete** version of the issuer layer that HB PLUS only previews: vetted-issuer authentication (so a Premium-attested post from "Bank X" reflects that Bank X has been vetted, not merely that someone controls a wallet labelled "Bank X"), image-content and signature/footer-block hash registration, editorial workflows, integration with content-management systems and institutional security policies, SLAs. Covered by contractual arrangements.
 
 - **KTOOR** — KickTech Origin Open Registry. A subset of KTOR offered **pro bono in narrow scope** by KickTech invitation to selected large state institutions, banks, and critical-infrastructure operators — for testing the use-case of protecting their clients and citizens from fraud that currently slips through existing state-run reporting systems.
 
-**Coexistence**: HB and the full KTOR ecosystem run side by side without conflict. A user with both extensions installed will, in certain cases, see two different attestations on the same content simultaneously — one from HB (popular-tier, text, account-level) and one from KTOR (full institutional, including issuer verification and image/signature blocks). The attestations cover different verification scopes and complement each other.
+**Coexistence**: HB and the full KTOR ecosystem run side by side without conflict. A user with both extensions installed will, in certain cases, see two different attestations on the same content simultaneously — one from HB (popular-tier, text, account-level or PLUS issuer-tagged) and one from KTOR (full institutional, including vetted issuer verification and image/signature blocks). The attestations cover different verification scopes and complement each other.
 
 KTOR is designed to **complement** existing state-run reporting and alert systems — for example, CERT Polska and the 8080 anti-fraud SMS line in Poland — by providing a publisher-anchored, on-chain authentication signal that fits into existing fraud-prevention workflows.
 

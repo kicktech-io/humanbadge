@@ -181,7 +181,7 @@ function _hbRunChallenge(sessionId) {
     label.textContent = t("challenge_verifying");
     label.style.cssText = "color:#e6e6e6;font-size:12px;";
     const iframe = document.createElement("iframe");
-    iframe.src = HB_BACKEND_URL + "/challenge?sid=" + encodeURIComponent(sessionId) + "&ext=" + encodeURIComponent(extId);
+    iframe.src = HB_BACKEND_URL + "/challenge?sid=" + encodeURIComponent(sessionId) + "&ext=" + encodeURIComponent(extId) + "&lang=" + encodeURIComponent(HB_LANG);
     iframe.style.cssText = "width:320px;height:170px;border:0;background:transparent;";
     iframe.setAttribute("title", "KickTech weryfikacja");
     const cancel = document.createElement("button");
@@ -223,6 +223,151 @@ function _hbRunChallenge(sessionId) {
     }, 12e4);
   });
 }
+function _hbRandHex(nBytes) {
+  const a = new Uint8Array(nBytes);
+  crypto.getRandomValues(a);
+  return "0x" + Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+function _hbGetTextSha256(rawHash) {
+  return new Promise((resolve) => {
+    try {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const id = tabs && tabs[0] && tabs[0].id;
+        if (!id) {
+          resolve(null);
+          return;
+        }
+        chrome.tabs.sendMessage(id, { type: "KT_PLUS_TEXT_SHA256", hash: rawHash }, (resp) => {
+          if (chrome.runtime.lastError) {
+            resolve(null);
+            return;
+          }
+          resolve(resp && resp.ok ? resp.sha256 : null);
+        });
+      });
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+function _hbBuildPlusTypedData(m) {
+  return {
+    types: {
+      EIP712Domain: [
+        { name: "name", type: "string" },
+        { name: "version", type: "string" },
+        { name: "chainId", type: "uint256" }
+      ],
+      PlusRegistration: [
+        { name: "platform", type: "string" },
+        { name: "domain", type: "string" },
+        { name: "contentHash", type: "bytes8" },
+        { name: "sha256", type: "bytes32" },
+        { name: "nonce", type: "bytes32" },
+        { name: "issuedAt", type: "uint256" },
+        { name: "signer", type: "address" }
+      ]
+    },
+    primaryType: "PlusRegistration",
+    domain: { name: "HumanBadge PLUS", version: "1", chainId: 84532 },
+    message: {
+      platform: m.platform,
+      domain: m.domain,
+      contentHash: m.contentHash,
+      sha256: m.sha256,
+      nonce: m.nonce,
+      issuedAt: m.issuedAt,
+      signer: m.signer
+    }
+  };
+}
+function _hbTxLink(info, txHash) {
+  const link = document.createElement("a");
+  link.href = "https://sepolia.basescan.org/tx/" + txHash;
+  link.target = "_blank";
+  link.textContent = "tx \u2197";
+  link.title = txHash;
+  info.innerHTML = "";
+  info.appendChild(link);
+}
+function _hbRenderRegisterResult(resp, button, info) {
+  button.classList.remove("registering");
+  const status = resp && resp.status;
+  const data = resp && resp.data;
+  if (resp && resp.ok && status === 200) {
+    button.classList.add("registered");
+    button.textContent = t("registered");
+    const txHash = data && data.txHash;
+    if (txHash) _hbTxLink(info, txHash);
+  } else if (status === 409) {
+    button.classList.add("registered");
+    button.textContent = t("already_registered");
+    const priorTx = data && data.prior && data.prior.txHash;
+    if (priorTx) _hbTxLink(info, priorTx);
+  } else {
+    button.classList.add("failed");
+    button.textContent = t("err_retry");
+    const detail = data && (data.detail || data.error);
+    info.textContent = (detail || "unknown").toString().slice(0, 48);
+    setTimeout(() => {
+      button.classList.remove("failed");
+      button.disabled = false;
+      button.textContent = t("register");
+    }, 3e3);
+  }
+}
+function _hbSendPlusRegister(button, info, img, currentTabUrl2, domain, platform, hart, plus) {
+  const contentHash = "0x" + img.hash;
+  const nonce = _hbRandHex(32);
+  const issuedAt = Math.floor(Date.now() / 1e3);
+  const signer = String(plus.address).toLowerCase();
+  const typedData = _hbBuildPlusTypedData({ platform, domain, contentHash, sha256: plus.sha256, nonce, issuedAt, signer });
+  const reg = {
+    contentHash,
+    domain,
+    platform,
+    urlHint: img.permalink || currentTabUrl2,
+    authorDomain: img.authorDomain,
+    hart,
+    address: signer,
+    nonce,
+    sha256: plus.sha256,
+    issuedAt
+  };
+  info.textContent = t("plus_sign_prompt");
+  _plusSend("PLUS_REGISTER", { reg, typedData }).then((resp) => {
+    if (!resp || !resp.ok || !resp.req) {
+      button.classList.remove("registering");
+      button.classList.add("failed");
+      button.textContent = t("err");
+      info.textContent = t("plus_error");
+      setTimeout(() => {
+        button.classList.remove("failed");
+        button.disabled = false;
+        button.textContent = t("register");
+      }, 3e3);
+      return;
+    }
+    _hbPollPlusRegister(resp.req, button, info);
+  });
+}
+function _hbPollPlusRegister(req, button, info) {
+  const deadline = Date.now() + 18e4;
+  const tick = () => {
+    if (Date.now() > deadline) return;
+    _plusSend("PLUS_RESULT", { req }).then((r) => {
+      const res = r && r.result;
+      if (!res) {
+        setTimeout(tick, 800);
+        return;
+      }
+      if (res.kind === "plus_register") {
+        _hbRenderRegisterResult({ ok: res.ok, status: res.status, data: res.data }, button, info);
+      }
+    });
+  };
+  setTimeout(tick, 800);
+}
 function _hbTriggerRegister(button, info, img, currentTabUrl2) {
   button.disabled = true;
   button.classList.remove("registered", "failed");
@@ -249,8 +394,19 @@ function _hbTriggerRegister(button, info, img, currentTabUrl2) {
   _hbGetSessionId().then((sessionId) => {
     if (!sessionId) throw new Error("no_session");
     return _hbRunChallenge(sessionId);
-  }).then((hart) => {
-    _hbSendRegister(button, info, img, currentTabUrl2, domain, platform, hart);
+  }).then(async (hart) => {
+    let plus = null;
+    try {
+      const st = await _plusSend("PLUS_STATE");
+      const wallet = st && st.wallet;
+      if (wallet && wallet.address) {
+        const sha = await _hbGetTextSha256(img.hash);
+        if (sha) plus = { address: wallet.address, sha256: sha };
+      }
+    } catch (e) {
+    }
+    if (plus) _hbSendPlusRegister(button, info, img, currentTabUrl2, domain, platform, hart, plus);
+    else _hbSendRegister(button, info, img, currentTabUrl2, domain, platform, hart);
   }).catch((err) => {
     button.classList.remove("registering");
     button.classList.add("failed");
@@ -840,7 +996,190 @@ $("btnThemeToggle").addEventListener("click", () => {
   $("btnThemeToggle").textContent = isLight ? "\u{1F319}" : "\u2600\uFE0F";
   $("btnThemeToggle").title = isLight ? "Switch to dark theme" : "Switch to light theme";
 });
+Object.assign(HB_I18N.pl, {
+  plus_title: "Tryb PLUS",
+  plus_mode_hint: "Rejestruj wpisy pod tagiem Twojej organizacji (wymaga portfela Issuera).",
+  plus_connect: "Po\u0142\u0105cz portfel",
+  plus_connecting: "Otwieram okno portfela\u2026",
+  plus_window_opened: "Otwarto okno portfela \u2014 potwierd\u017A po\u0142\u0105czenie, potem wr\xF3\u0107 tutaj.",
+  plus_connected: "Po\u0142\u0105czono",
+  plus_disconnect: "Od\u0142\u0105cz",
+  plus_disconnect_wallet: "Od\u0142\u0105cz portfel",
+  plus_signtest: "Test podpisu",
+  plus_sign_prompt: "Podpisz w portfelu, potem wr\xF3\u0107 tutaj po wynik\u2026",
+  plus_reg_last_ok: "Ostatnia rejestracja PLUS: \u2713",
+  plus_reg_last_fail: "Ostatnia rejestracja PLUS: b\u0142\u0105d",
+  plus_signtest_open: "Otwarto okno \u2014 podpisz wiadomo\u015B\u0107 testow\u0105.",
+  plus_signtest_ok: "\u2713 Podpis testowy OK",
+  plus_cancelled: "Anulowano",
+  plus_error: "B\u0142\u0105d portfela"
+});
+Object.assign(HB_I18N.en, {
+  plus_title: "PLUS mode",
+  plus_mode_hint: "Register posts under your organization's tag (requires the Issuer wallet).",
+  plus_connect: "Connect wallet",
+  plus_connecting: "Opening wallet window\u2026",
+  plus_window_opened: "Wallet window opened \u2014 approve the connection, then come back here.",
+  plus_connected: "Connected",
+  plus_disconnect: "Disconnect",
+  plus_disconnect_wallet: "Disconnect wallet",
+  plus_signtest: "Test signature",
+  plus_sign_prompt: "Sign in your wallet, then come back here for the result\u2026",
+  plus_reg_last_ok: "Last PLUS registration: \u2713",
+  plus_reg_last_fail: "Last PLUS registration: error",
+  plus_signtest_open: "Window opened \u2014 sign the test message.",
+  plus_signtest_ok: "\u2713 Test signature OK",
+  plus_cancelled: "Cancelled",
+  plus_error: "Wallet error"
+});
+function _plusSend(type, payload) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(Object.assign({ type }, payload || {}), (resp) => {
+        if (chrome.runtime.lastError) {
+          resolve(null);
+          return;
+        }
+        resolve(resp || null);
+      });
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+function _shortAddr(a) {
+  if (!a || a.length < 10) return a || "";
+  return a.slice(0, 6) + "\u2026" + a.slice(-4);
+}
+function _plusRender(wallet) {
+  const bar = $("hbPlusBar");
+  if (!bar) return;
+  const status = $("hbPlusStatus");
+  const toggleBtn = $("hbPlusConnect");
+  const addrEl = $("hbPlusAddr");
+  const testBtn = $("hbPlusTest");
+  if (wallet && wallet.address) {
+    if (status && !status.textContent) {
+      status.textContent = t("plus_connected");
+      status.className = "hb-plus-status ok";
+    }
+    if (toggleBtn) {
+      toggleBtn.style.display = "inline-block";
+      toggleBtn.disabled = false;
+      toggleBtn.dataset.mode = "disconnect";
+      toggleBtn.textContent = t("plus_disconnect_wallet");
+      toggleBtn.classList.add("ghost");
+    }
+    if (addrEl) {
+      addrEl.style.display = "inline-block";
+      addrEl.textContent = _shortAddr(wallet.address);
+    }
+    if (testBtn) testBtn.style.display = "inline-block";
+  } else {
+    if (status) {
+      status.textContent = "";
+      status.className = "hb-plus-status";
+    }
+    if (toggleBtn) {
+      toggleBtn.style.display = "inline-block";
+      toggleBtn.disabled = false;
+      toggleBtn.dataset.mode = "connect";
+      toggleBtn.textContent = t("plus_connect");
+      toggleBtn.classList.remove("ghost");
+    }
+    if (addrEl) addrEl.style.display = "none";
+    if (testBtn) testBtn.style.display = "none";
+  }
+}
+async function _plusPoll(req, mode) {
+  const deadline = Date.now() + 12e4;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 700));
+    const resp = await _plusSend("PLUS_RESULT", { req });
+    const result = resp && resp.result;
+    if (!result) continue;
+    const status = $("hbPlusStatus");
+    if (result.ok && (result.mode === "connect" || result.mode === "signtest")) {
+      const st = await _plusSend("PLUS_STATE");
+      _plusRender(st && st.wallet);
+      if (result.mode === "signtest" && status) {
+        status.textContent = t("plus_signtest_ok");
+        status.className = "hb-plus-status ok";
+      }
+    } else if (result.ok && result.mode === "sign") {
+      if (status) {
+        status.textContent = "\u2713";
+        status.className = "hb-plus-status ok";
+      }
+    } else {
+      _plusRender(null);
+      if (status) {
+        status.textContent = result.error === "window_closed" ? t("plus_cancelled") : t("plus_error") + ": " + (result.error || "?");
+        status.className = "hb-plus-status err";
+      }
+    }
+    return;
+  }
+}
+async function initPlusWallet() {
+  const bar = $("hbPlusBar");
+  if (!bar) return;
+  const connectBtn = $("hbPlusConnect");
+  const testBtn = $("hbPlusTest");
+  const titleEl = $("hbPlusTitle");
+  const hintEl = $("hbPlusHint");
+  if (titleEl) titleEl.textContent = t("plus_title");
+  if (hintEl) hintEl.textContent = t("plus_mode_hint");
+  const st = await _plusSend("PLUS_STATE");
+  _plusRender(st && st.wallet);
+  if (st && st.lastRegister) {
+    const status = $("hbPlusStatus");
+    const lr = st.lastRegister;
+    if (status) {
+      const okReg = lr.ok && lr.status === 200;
+      status.textContent = okReg ? t("plus_reg_last_ok") : t("plus_reg_last_fail");
+      status.className = "hb-plus-status " + (okReg ? "ok" : "err");
+    }
+  }
+  if (connectBtn) connectBtn.addEventListener("click", async () => {
+    const status = $("hbPlusStatus");
+    if (connectBtn.dataset.mode === "disconnect") {
+      connectBtn.disabled = true;
+      await _plusSend("PLUS_DISCONNECT");
+      _plusRender(null);
+      return;
+    }
+    connectBtn.disabled = true;
+    connectBtn.textContent = t("plus_connecting");
+    const resp = await _plusSend("PLUS_CONNECT");
+    if (!resp || !resp.ok || !resp.req) {
+      _plusRender(null);
+      if (status) {
+        status.textContent = t("plus_error");
+        status.className = "hb-plus-status err";
+      }
+      return;
+    }
+    if (status) {
+      status.textContent = t("plus_window_opened");
+      status.className = "hb-plus-status";
+    }
+    _plusPoll(resp.req, "connect");
+  });
+  if (testBtn) testBtn.addEventListener("click", async () => {
+    const status = $("hbPlusStatus");
+    const resp = await _plusSend("PLUS_SIGNTEST");
+    if (resp && resp.ok && resp.req) {
+      if (status) {
+        status.textContent = t("plus_signtest_open");
+        status.className = "hb-plus-status";
+      }
+      _plusPoll(resp.req, "signtest");
+    }
+  });
+}
 load();
+initPlusWallet();
 (() => {
   const tag = document.querySelector(".brand-text p");
   if (tag) tag.textContent = t("tagline");

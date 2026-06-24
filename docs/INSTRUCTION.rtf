@@ -63,6 +63,22 @@ README
 {\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b Edits invalidate} \u8212- if you edit the post after registration, the new hash no longer matches the registered hash, and the badge disappears for new readers. You\u8217'd need to re-register the new version.\sa180\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Smartphone publishing\par}
 {\pard \ql \f0 \sa180 \li720 \fi0 {\b HB does not run on smartphone apps} (see \u167 ?7). If you want to register content while on a smartphone, open the relevant platform\u8217's website in a desktop/laptop Chromium browser with HB installed, log in there, and use the web version to register.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 HB PLUS \u8212- verified-issuer registration (beta)\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 HB PLUS is an optional sub-tier for {\b registered Issuers} and an MVP bridge toward KTOR Premium. Instead of (or in addition to) the account-level proof above, an Issuer cryptographically signs authorship with their wallet, and the content then displays under the Issuer\u8217's {\b organization tag} (e.g.\u160 ?{\f1 \u55357 ?\u56420 ? FAPL TEST}) rather than the generic \u55357 ?\u56420 ? HUMAN badge. Editing the content still invalidates the badge, exactly as in regular HB.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Who it\u8217's for:} an Issuer enrolled in the on-chain issuer registry whose legal name begins with an organization tag in brackets (e.g.\u160 ?{\f1 [FAPL TEST] \u8230 ?}). Regular publishers and all readers need nothing new \u8212- readers simply see the org tag on signed content.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Issuer step-by-step (text content during beta):}\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab {\b Connect a wallet} \u8212- in the popup\u8217's PLUS bar, click {\i Connect wallet}. A KickTech connector page opens in a normal browser window; approve the connection in your wallet. The popup then shows the connected Issuer address.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab {\b Publish + Register as usual} (steps 4\u8211-6 above). With a wallet connected and a text entry selected, Register switches into PLUS mode automatically.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab {\b Pass the anti-bot check} \u8212- the normal Turnstile step runs first (issues a short-lived HART).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab {\b Sign in your wallet} \u8212- the connector prompts for an EIP-712 signature over the registration. If your wallet isn\u8217't on Base Sepolia, it first asks to switch/add that network (beta runs on Base Sepolia). Approve the signature.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab {\b Done} \u8212- the backend re-verifies the signature server-side against the issuer registry, derives your org tag, and registers the asset under {\f1 [HUMAN] [YOUR TAG] \u8230 ?}. The popup shows the result; after the snapshot refresh, readers see your org tag on the content.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b What PLUS is \u8212- and is not.} PLUS is {\i limited} issuer verification: cryptographic proof that the signer controls a wallet enrolled as an Issuer. It is the beta MVP of the issuer layer \u8212- {\b not} the full KTOR Premium offering (institutional vetting, image/signature-block registration, editorial workflows, SLAs), which remains separate (\u167 ?9, \u167 ?12). What leaves your browser in PLUS mode is covered in \u167 ?10; the privacy handling of the signature and wallet address is in {\field{\*\fldinst{HYPERLINK "../PRIVACY.md"}}{\fldrslt{\ul
+PRIVACY.md
+}}}
+ \u167 ?9.2b and \u167 ?10.2a.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\b Notes:}\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab PLUS currently applies to {\b text} entries (the exact-content SHA-256 is computed from the canonical text). Image/signature-block attestation stays a KTOR/KTOOR feature (\u167 ?12).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab The single signature authorizes one registration; the wallet connection persists until you click {\i Disconnect}.\sa180\par}
 {\pard \qc \f0 \sa180 \li0 \fi0 \emdash\emdash\emdash\emdash\emdash\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel1 \b \fs32 4. Verification flow (reader workflow)\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 This is what happens automatically when a reader running HB visits a page.\par}
@@ -302,6 +318,7 @@ README
 {\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No image-content registration.} HB registers text hashes only. If a post contains an image important to the content authenticity (a logo, a signed document, a chart), the image is not part of HB\u8217's authentication.\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No signature/footer-block hashing.} HB does not register or check structured signature blocks (e.g., an institutional email footer with letterhead and contact details).\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab {\b No issuer authentication for institutional accounts.} HB does not have a process where institutions (banks, government agencies, news organizations) can prove they are who they claim to be.\sa180\par}
+{\pard \ql \f0 \sa180 \li720 \fi0 {\b HB PLUS (beta) is the one nuance here.} As an optional sub-tier (see \u167 ?3), a {\i registered Issuer} can sign content with their wallet, and it then displays under their organization tag. This is a {\b limited} form of issuer verification \u8212- proof of control over an enrolled Issuer wallet \u8212- and an MVP bridge toward Premium. It does {\b not} replace full KTOR Premium vetting: PLUS does not vet that the organization is who it claims to be in a legal/institutional sense, and (like base HB) it does not do image-content or signature-block hashing. For institutional-grade authentication, \u167 ?12 still applies.\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel2 \b \fs28 Implications \u8212- and why we deliberately keep HB this way\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab HB is excellent for {\b ordinary social-media and messenger use}. Your friends, followers, and contacts trust the \u55357 ?\u56420 ? badge on your posts as a signal that the post is genuinely yours, on your account, unedited.\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab HB is {\b deliberately NOT suitable as an \u8220"officialness\u8221" certification} for institutional communications. A user who creates a fake account named \u8220"Bank XYZ\u8221" and uses HB on that fake account to register a fake announcement would technically produce a \u55357 ?\u56420 ? badge on their fake post \u8212- because HB has no way to verify they aren\u8217't actually Bank XYZ. {\b This is precisely why HB is not positioned for, and should not be used as, institutional authentication.} Doing so would create a misleading trust signal exploitable for discrediting genuine institutions.\sa180\par}
@@ -389,6 +406,36 @@ README
 {{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A heartbeat to the gateway\par}
 \cell}
 {{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To detect service outages and show a status indicator\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Outbound \u8212- PLUS connect/sign\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Only when an Issuer connects a wallet and signs (the connector page, on explicit action)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The wallet connection, then an EIP-712 signature over the registration\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To obtain the Issuer\u8217's cryptographic authorization (re-verified server-side)\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx2160\cellx4320\cellx6480\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Outbound \u8212- PLUS register\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Only on Issuer registration, with the normal register call\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 Additionally: the Issuer wallet address, the EIP-712 signature, a single-use nonce, and a SHA-256 of the content (a one-way hash, never the text)\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 To register the verified-issuer attestation under the org tag; see PRIVACY.md \u167 ?9.2b, \u167 ?10.2a\par}
 \cell}
 }
 \intbl\row}
@@ -503,7 +550,51 @@ www.kicktech.io
 {
 {{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b HB}\par}
 \cell}
-{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 HumanBadge, this extension. The lightweight, popular-use tier of KTOR. No identity verification of registrants; text hashing only.\par}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 HumanBadge, this extension. The lightweight, popular-use tier of KTOR. Base HB has no identity verification of registrants and does text hashing only; the optional {\b HB PLUS} sub-tier adds limited verified-issuer signing (see below).\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b HB PLUS}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 An optional beta sub-tier of HB and an MVP bridge toward KTOR Premium. A registered Issuer signs authorship of exact content with their wallet (EIP-712), the backend re-verifies it server-side against the issuer registry, and the content displays under the Issuer\u8217's organization tag ({\f1 [HUMAN] [TAG] \u8230 ?}). Limited issuer verification (control of an enrolled wallet) \u8212- not the full Premium vetting. Text-only during beta.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b Issuer}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 An entity enrolled in the on-chain issuer registry. For HB PLUS, an Issuer whose legal name begins with a bracketed organization tag (e.g.\u160 ?{\f1 [FAPL TEST] \u8230 ?}) can sign content; the bracketed token becomes the on-chain org tag.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b EIP-712}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 A standard for signing structured (typed) data with an Ethereum-compatible wallet. HB PLUS uses it so an Issuer signs the exact registration details, which the backend verifies by recovering the signer address.\par}
+\cell}
+}
+\intbl\row}
+{
+\trowd \trgaph120
+\cellx4320\cellx8640
+\trkeep\intbl
+{
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b PLUS attestation}\par}
+\cell}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The Issuer\u8217's EIP-712 signature plus the signed message, stored off-chain as durable evidence that the Issuer authorized the exact content; keyed by the content\u8217's SimHash marker. Erasable on request (PRIVACY.md \u167 ?9.2b).\par}
 \cell}
 }
 \intbl\row}
@@ -514,7 +605,7 @@ www.kicktech.io
 {
 {{\pard\intbl \ql \f0 \sa0 \li0 \fi0 {\b KTOR Premium}\par}
 \cell}
-{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The full-featured institutional tier of KTOR. Includes verified-issuer authentication, image-content and signature-block hash registration, organizational workflows, SLAs, integration support. For companies, public institutions, and government agencies. Contractual.\par}
+{{\pard\intbl \ql \f0 \sa0 \li0 \fi0 The full-featured institutional tier of KTOR. Includes the complete verified-issuer authentication that HB PLUS only previews, plus image-content and signature-block hash registration, organizational workflows, SLAs, integration support. For companies, public institutions, and government agencies. Contractual.\par}
 \cell}
 }
 \intbl\row}

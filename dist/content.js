@@ -20,6 +20,8 @@ const HB_DESC_I18N = {
     suspicious_links: "Podejrzane linki w zweryfikowanej wiadomo\u015Bci: {x}",
     human_ok: "Aktywne potwierdzenie autorstwa \u2014 autor stoi za t\u0105 dok\u0142adn\u0105 tre\u015Bci\u0105. Edycja uniewa\u017Cnia badge.",
     human_unauth: "Tre\u015B\u0107 attestowana przez autora, ale ta strona nie jest autoryzowana przez wystawc\u0119 \u2014 mo\u017Cliwa kopia.",
+    human_plus_ok: "Potwierdzone autorstwo organizacji {tag} \u2014 podpisane kluczem zarejestrowanego Issuera. Edycja uniewa\u017Cnia badge.",
+    human_plus_unauth: "Tre\u015B\u0107 podpisana przez {tag}, ale ta strona nie jest autoryzowana przez wystawc\u0119 \u2014 mo\u017Cliwa kopia.",
     msgr_ok: "Wiadomo\u015B\u0107 zweryfikowana \u2014 oryginalny post w tym w\u0105tku (Messenger)",
     msgr_unauth: "Tre\u015B\u0107 rozpoznana, ale w\u0105tek nieautoryzowany (Messenger)",
     tip_hint: "\u2192 Sprawd\u017A szczeg\xF3\u0142y na g\xF3rnym pasku przegl\u0105darki w rozszerzeniu KickTech \u2191",
@@ -38,6 +40,8 @@ const HB_DESC_I18N = {
     suspicious_links: "Suspicious links in a verified message: {x}",
     human_ok: "Active proof of authorship \u2014 the author stands behind this exact content. Editing invalidates the badge.",
     human_unauth: "Content attested by an author, but this page is not authorized by the issuer \u2014 possible copy.",
+    human_plus_ok: "Verified authorship by {tag} \u2014 signed with a registered Issuer's key. Editing invalidates the badge.",
+    human_plus_unauth: "Content signed by {tag}, but this page is not authorized by the issuer \u2014 possible copy.",
     msgr_ok: "Message verified \u2014 original post in this thread (Messenger)",
     msgr_unauth: "Content recognized, but the thread is not authorized (Messenger)",
     tip_hint: "\u2192 Check the details in the KickTech extension on the browser top bar \u2191",
@@ -180,7 +184,17 @@ function _hbInViewport(el) {
   return r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth;
 }
 function _hbDeriveHumanBadge(issuer, authorized) {
-  if (!issuer || !(issuer.assetLabel || "").startsWith("[HUMAN] ")) return null;
+  const label = issuer && issuer.assetLabel || "";
+  if (!label.startsWith("[HUMAN] ")) return null;
+  const rest = label.slice(8);
+  const m = /^\[([^\]]+)\]/.exec(rest);
+  const plusTag = m ? m[1].trim() : null;
+  if (plusTag) {
+    if (authorized) {
+      return { kind: "human", shortLabel: plusTag, tipDesc: hbT("human_plus_ok", { tag: plusTag }), plus: true, plusTag };
+    }
+    return { kind: "bad", shortLabel: "!", tipDesc: hbT("human_plus_unauth", { tag: plusTag }), plus: true, plusTag };
+  }
   if (authorized) {
     return {
       kind: "human",
@@ -3388,6 +3402,24 @@ async function scanPage() {
   }
 }
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === "KT_PLUS_TEXT_SHA256") {
+    (async () => {
+      try {
+        const key = String(msg.hash || "").toLowerCase().replace(/^0x/, "");
+        const norm = (globalThis._hbTextNorm || {})[key];
+        if (!norm) {
+          sendResponse({ ok: false, error: "no_canonical_text" });
+          return;
+        }
+        const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(norm));
+        const hex = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+        sendResponse({ ok: true, sha256: "0x" + hex });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e && e.message || e) });
+      }
+    })();
+    return true;
+  }
   if (msg?.type === "GET_PAGE_STATUS") {
     let consumerMail = null;
     try {

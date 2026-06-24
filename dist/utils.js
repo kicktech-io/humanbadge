@@ -101,7 +101,15 @@ function simHash(text) {
   }
   const hexHi = (hi >>> 0).toString(16).padStart(8, "0");
   const hexLo = (lo >>> 0).toString(16).padStart(8, "0");
-  return hexHi + hexLo;
+  const out = hexHi + hexLo;
+  try {
+    const m = globalThis._hbTextNorm || (globalThis._hbTextNorm = {});
+    const keys = Object.keys(m);
+    if (keys.length > 600) delete m[keys[0]];
+    m[out] = normalized;
+  } catch (e) {
+  }
+  return out;
 }
 function urlMatchesPattern(url, pattern) {
   try {

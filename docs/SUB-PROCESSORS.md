@@ -1,7 +1,7 @@
 # KickTech HumanBadge — Sub-Processor Register & DPA Status
 
-**Version:** 1.1 (operational record, not a legal document)
-**Last reviewed:** 8 June 2026
+**Version:** 1.2 (operational record, not a legal document)
+**Last reviewed:** 24 June 2026
 
 > **What this document is — and is not**
 >
@@ -44,7 +44,7 @@ For each sub-processor, the columns capture:
 |---|---|---|---|---|---|---|
 | **Vercel Inc.** | Backend hosting; network-edge rate-limiting (Vercel Firewall) | IP addresses at the edge level only (read for rate-limiting, not retained beyond rate-limit window; **never passed to the HumanBadge application**) | USA; EU regions where available | https://vercel.com/legal/dpa | In place (auto-accepted at account signup per vendor's standard terms) | SCCs + EU-US DPF where applicable |
 | **Cloudflare, Inc.** | DNS resolution for our domains; Turnstile (bot-detection challenge for beta access) | Standard DNS queries; Turnstile challenge tokens. **No payload data passes through Cloudflare beyond DNS.** | USA / global | https://www.cloudflare.com/cloudflare-customer-dpa/ | In place (auto-accepted at account signup per vendor's standard terms) | SCCs + EU-US DPF where applicable |
-| **Upstash Inc.** | Rate-limiting Redis backend (counters keyed by hashed identifiers); server-side store for per-registration author-handle HMAC keys (`K`, Path C) | Short-lived rate-limit counters (**no PII**); per-registration HMAC keys `K` — random keys, **not handles**, encrypted at rest (AES-256-GCM) and retained a sliding 30 days then auto-deleted. `K` is the means by which on-chain handle markers are protected and erased (see [`../PRIVACY.md`](../PRIVACY.md) §9.1, §9.2a, §10.2) | USA / EU regions | https://upstash.com/legal | In place (auto-accepted at account signup per vendor's standard terms) | SCCs where data leaves EEA |
+| **Upstash Inc.** | Rate-limiting Redis backend (counters keyed by hashed identifiers); server-side store for per-registration author-handle HMAC keys (`K`, Path C); HB PLUS single-use nonces and PLUS attestations | Short-lived rate-limit counters (**no PII**); per-registration HMAC keys `K` — random keys, **not handles**, encrypted at rest (AES-256-GCM) and retained a sliding 30 days then auto-deleted; HB PLUS single-use nonces (short-lived, ≤15 min); HB PLUS attestations — an Issuer's EIP-712 signature + signed message (the message contains the Issuer wallet address and content hashes, **no content text**), retained for the life of the registration and deleted on erasure request (see [`../PRIVACY.md`](../PRIVACY.md) §9.1, §9.2a, §9.2b, §10.2, §10.2a) | USA / EU regions | https://upstash.com/legal | In place (auto-accepted at account signup per vendor's standard terms) | SCCs where data leaves EEA |
 | **Coinbase Technologies, Inc. / Base / Optimism Collective** | Public blockchain (Base Sepolia during beta; Base mainnet later) | Content hashes; publishing-channel identifiers; timestamps; transaction signatures — written to a **public, immutable** ledger | Global (decentralized) | [Not applicable in the conventional GDPR sub-processor sense — see Note 2.1] | N/A | N/A (public ledger) |
 
 ### 2.1 Note on the public blockchain
@@ -63,6 +63,10 @@ However, **rate-limiting at the network edge** is operationally necessary (to pr
 This means: from a "purist GDPR" perspective, the only direct processing of IP-class personal data in HumanBadge's stack happens **at Vercel's edge**, under **Vercel's standard DPA** that KickTech has signed. KickTech's own application code never sees an IP.
 
 This architectural choice is a substantive privacy property of HumanBadge, not just a policy claim — and the sub-processor register above is the operational evidence chain that backs it up.
+
+### 2.3 Note on HB PLUS
+
+The HB PLUS verified-issuer layer (introduced for the beta) **added no new sub-processor**. The PLUS single-use nonces and attestations reuse the existing Upstash store (augmented row above); the EIP-712 signature is verified by the Backend application itself; the wallet connection happens directly between the user's wallet and our own connector page (no third party intermediates the signature). The Issuer wallet address and signature recorded in an attestation are covered by the existing Upstash DPA. See [`../PRIVACY.md`](../PRIVACY.md) §9.2b and §10.2a.
 
 ---
 

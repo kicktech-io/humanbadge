@@ -84,7 +84,8 @@ The following are valid targets for vulnerability research under this policy:
 
 - Cryptographic bugs — KT-token derivation and rotation, HMAC computation and verification, hash function usage, randomness sources, key material handling.
 - Privacy bypasses — any way for the extension to leak data inconsistent with the commitments in [PRIVACY.md](PRIVACY.md) (e.g., transmitting plaintext content, leaking handles outside the documented verify-HMAC flow, persisting data labelled as transient).
-- Anti-spoof bypasses — any way to obtain a 👤 badge on content the legitimate publisher did not register, or to evade the warning badge in an unauthorized-copy scenario where the keyed-HMAC author check should have caught it (see PRIVACY.md §10.2).
+- Anti-spoof bypasses — any way to obtain a 👤 badge on content the legitimate publisher did not register, or to evade the warning badge in an unauthorized-copy scenario where the keyed-HMAC author check should have caught it (see PRIVACY.md §10.2). For **HB PLUS**, this includes obtaining an Issuer **organization tag** (e.g. `[HUMAN] [TAG] …`) on content not authorized by that Issuer.
+- HB PLUS wallet-connect bridge — integrity of the connector channel (`externally_connectable` to `verify.kicktech.io`): any way for a page or origin other than the connector to inject or forge a connect/sign result into the extension, to hijack a pending signing request, or to obtain a wallet signature the user did not approve. (The channel is **not** a trust boundary — the Backend re-verifies every signature — but channel integrity and the origin gate are still in scope.)
 - Local privilege issues — anything that elevates the extension's privileges beyond its declared manifest permissions, or that lets a malicious web page tamper with extension state.
 - Supply-chain — concerns about packages declared in `package.json` or about the build pipeline in `scripts/`.
 
@@ -94,6 +95,8 @@ The following are valid targets for vulnerability research under this policy:
 - Injection — SQL/NoSQL injection (we don't run a SQL DB, but any storage abstraction), command injection, header injection, server-side template injection, deserialization issues.
 - Data exposure — IDOR (insecure direct object references), information leakage in error messages, exposure of HMAC keys, exposure of any data that should be in-memory only per PRIVACY.md.
 - Cryptographic mishandling — verify-HMAC endpoint not honouring the in-memory-only commitment (e.g., logging candidate handles, persisting them, leaking via timing or error path).
+- HB PLUS issuer-signature verification — any way to register under an Issuer's organization tag without controlling that Issuer's wallet: forging or otherwise getting the Backend to accept an EIP-712 signature, a signer/address-mismatch bypass, replaying a single-use nonce, defeating the `issuedAt` freshness check, or exploiting the domain/chainId binding (see PRIVACY.md §10.2a).
+- HB PLUS attestation store — exposure of stored attestations (an Issuer's signature + signed message) beyond their purpose, or any PLUS data that should be transient leaking via the PLUS path.
 - Misconfiguration — TLS issues, missing security headers, exposed admin endpoints.
 
 ### 4.2 Out of scope
@@ -172,6 +175,7 @@ We recognize that security research effort spent on out-of-scope items is still 
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 2 June 2026 | Initial version of this Security Policy. |
+| 1.1 | 24 June 2026 | Added HB PLUS to scope (§4.1): verified-issuer EIP-712 signature verification, single-use nonce, the wallet-connect bridge / `externally_connectable` origin gate, and the off-chain attestation store. |
 
 ---
 

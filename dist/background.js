@@ -705,5 +705,340 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     })();
     return true;
   }
+  if (typeof msg?.type === "string" && msg.type.indexOf("PLUS_") === 0) {
+    if (msg.type === "PLUS_CONNECT") {
+      (async () => {
+        sendResponse({ ok: true, req: await _plusOpenConnector("connect") });
+      })();
+      return true;
+    }
+    if (msg.type === "PLUS_SIGNTEST") {
+      (async () => {
+        sendResponse({ ok: true, req: await _plusOpenConnector("signtest") });
+      })();
+      return true;
+    }
+    if (msg.type === "PLUS_SIGN") {
+      (async () => {
+        const wallet = await _plusGetWallet();
+        if (!wallet || !wallet.address) {
+          sendResponse({ ok: false, error: "wallet_not_connected" });
+          return;
+        }
+        if (!msg.typedData || typeof msg.typedData !== "object") {
+          sendResponse({ ok: false, error: "no_typed_data" });
+          return;
+        }
+        const req = await _plusOpenConnector("sign", { address: wallet.address, typedData: msg.typedData });
+        sendResponse({ ok: true, req });
+      })();
+      return true;
+    }
+    if (msg.type === "PLUS_REGISTER") {
+      (async () => {
+        const reg = msg.reg || {};
+        if (!reg.address || !msg.typedData || typeof msg.typedData !== "object") {
+          sendResponse({ ok: false, error: "bad_plus_register" });
+          return;
+        }
+        const req = await _plusOpenConnector("sign", { address: reg.address, typedData: msg.typedData, reg });
+        sendResponse({ ok: true, req });
+      })();
+      return true;
+    }
+    if (msg.type === "PLUS_RESULT") {
+      (async () => {
+        const reqId = String(msg.req || "");
+        let result = null;
+        try {
+          const d = await chrome.storage.session.get(["plusResult:" + reqId]);
+          result = d["plusResult:" + reqId] || null;
+        } catch (e) {
+        }
+        if (result) {
+          try {
+            await chrome.storage.session.remove(["plusResult:" + reqId]);
+          } catch (e) {
+          }
+        }
+        sendResponse({ ok: true, result });
+      })();
+      return true;
+    }
+    if (msg.type === "PLUS_STATE") {
+      (async () => {
+        const wallet = await _plusGetWallet();
+        let lastRegister = null;
+        try {
+          const d = await chrome.storage.session.get(["plusLastRegister"]);
+          lastRegister = d.plusLastRegister || null;
+          if (lastRegister) await chrome.storage.session.remove(["plusLastRegister"]);
+        } catch (e) {
+        }
+        sendResponse({ ok: true, wallet, lastRegister });
+      })();
+      return true;
+    }
+    if (msg.type === "PLUS_DISCONNECT") {
+      (async () => {
+        await _plusResetAll();
+        sendResponse({ ok: true });
+      })();
+      return true;
+    }
+  }
   sendResponse({ ok: false, error: "Unknown message type" });
+});
+const PLUS_CONNECTOR_BASE = "https://verify.kicktech.io/connect";
+const PLUS_CONNECTOR_ORIGIN = "https://verify.kicktech.io";
+const PLUS_WIN = { width: 460, height: 660 };
+const plusPending = /* @__PURE__ */ new Map();
+function _plusUuid() {
+  try {
+    return crypto.randomUUID();
+  } catch (e) {
+    return "r-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+  }
+}
+function _plusLang() {
+  try {
+    const ui = chrome.i18n && chrome.i18n.getUILanguage && chrome.i18n.getUILanguage() || "";
+    return String(ui).toLowerCase().indexOf("pl") === 0 ? "pl" : "en";
+  } catch (e) {
+    return "pl";
+  }
+}
+async function _plusSavePending(reqId, rec) {
+  plusPending.set(reqId, rec);
+  try {
+    await chrome.storage.session.set({ ["plusPending:" + reqId]: rec });
+  } catch (e) {
+  }
+}
+async function _plusGetPending(reqId) {
+  if (plusPending.has(reqId)) return plusPending.get(reqId);
+  try {
+    const d = await chrome.storage.session.get(["plusPending:" + reqId]);
+    return d["plusPending:" + reqId] || null;
+  } catch (e) {
+    return null;
+  }
+}
+async function _plusClearPending(reqId) {
+  plusPending.delete(reqId);
+  try {
+    await chrome.storage.session.remove(["plusPending:" + reqId]);
+  } catch (e) {
+  }
+}
+async function _plusSetResult(reqId, result) {
+  try {
+    await chrome.storage.session.set({ ["plusResult:" + reqId]: result });
+  } catch (e) {
+  }
+}
+async function _plusGetWallet() {
+  try {
+    const d = await chrome.storage.session.get(["plusWallet"]);
+    return d.plusWallet || null;
+  } catch (e) {
+    return null;
+  }
+}
+async function _plusSetWallet(w) {
+  try {
+    await chrome.storage.session.set({ plusWallet: w });
+  } catch (e) {
+  }
+}
+async function _plusClearWallet() {
+  try {
+    await chrome.storage.session.remove(["plusWallet"]);
+  } catch (e) {
+  }
+}
+async function _plusResetAll() {
+  await _plusClearWallet();
+  plusPending.clear();
+  try {
+    const all = await chrome.storage.session.get(null);
+    const stale = Object.keys(all || {}).filter(
+      (k) => k.indexOf("plusResult:") === 0 || k.indexOf("plusPending:") === 0
+    );
+    if (stale.length) await chrome.storage.session.remove(stale);
+  } catch (e) {
+  }
+}
+async function _plusCloseWindow(windowId) {
+  if (typeof windowId !== "number") return;
+  try {
+    await chrome.windows.remove(windowId);
+  } catch (e) {
+  }
+}
+async function _plusOpenConnector(mode, pendingExtra) {
+  const reqId = _plusUuid();
+  const url = PLUS_CONNECTOR_BASE + "?ext=" + encodeURIComponent(chrome.runtime.id) + "&req=" + encodeURIComponent(reqId) + "&mode=" + encodeURIComponent(mode) + "&lang=" + encodeURIComponent(_plusLang());
+  let win;
+  try {
+    win = await chrome.windows.create({
+      url,
+      type: "popup",
+      focused: true,
+      width: PLUS_WIN.width,
+      height: PLUS_WIN.height
+    });
+  } catch (e) {
+    await _plusSetResult(reqId, { ok: false, error: "window_open_failed" });
+    return reqId;
+  }
+  const rec = Object.assign({ mode, windowId: win && win.id, createdAt: Date.now() }, pendingExtra || {});
+  await _plusSavePending(reqId, rec);
+  return reqId;
+}
+function _plusExternalAllowed(sender) {
+  if (!sender) return false;
+  if (sender.origin === PLUS_CONNECTOR_ORIGIN) return true;
+  if (typeof sender.url === "string" && sender.url.indexOf(PLUS_CONNECTOR_ORIGIN + "/") === 0) return true;
+  return false;
+}
+async function _plusDoRegister(reg, signature) {
+  let sessionId, tokenInfo;
+  try {
+    sessionId = await _hbGetOrCreateSessionId();
+    tokenInfo = await getCurrentToken();
+  } catch (e) {
+    return { ok: false, status: 0, data: { error: "enrich_failed", detail: String(e && e.message || e) } };
+  }
+  if (!tokenInfo || !tokenInfo.token) {
+    return { ok: false, status: 0, data: { error: "token_unavailable" } };
+  }
+  const payload = {
+    sessionId,
+    requestedToken: tokenInfo.token,
+    contentHash: reg.contentHash,
+    domain: reg.domain,
+    platform: reg.platform,
+    address: reg.address,
+    signature,
+    nonce: reg.nonce,
+    sha256: reg.sha256,
+    issuedAt: reg.issuedAt
+  };
+  if (reg.urlHint) payload.urlHint = String(reg.urlHint).slice(0, 200);
+  if (reg.authorDomain) payload.authorDomain = String(reg.authorDomain).slice(0, 200);
+  if (reg.hart) payload.hart = String(reg.hart).slice(0, 128);
+  try {
+    const resp = await fetch(HB_BACKEND_URL + "/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    let data = null;
+    try {
+      data = await resp.json();
+    } catch (e) {
+    }
+    return { ok: resp.ok, status: resp.status, data };
+  } catch (e) {
+    return { ok: false, status: 0, data: { error: "network_error", detail: String(e && e.message || e) } };
+  }
+}
+function _plusAfterRegisterRefresh() {
+  setTimeout(async () => {
+    try {
+      registryCache = null;
+      cacheTimestamp = 0;
+      await chrome.storage.session.remove(["registryCache", "cacheTimestamp"]).catch(() => {
+      });
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabId = tabs && tabs[0] && tabs[0].id;
+      if (tabId) chrome.tabs.sendMessage(tabId, { type: "RESCAN" }, () => {
+        void chrome.runtime.lastError;
+      });
+    } catch (e) {
+    }
+  }, 8e3);
+}
+chrome.runtime.onMessageExternal.addListener((msg, sender, sendResponse) => {
+  if (!_plusExternalAllowed(sender)) {
+    sendResponse({ ok: false, error: "forbidden_origin" });
+    return false;
+  }
+  if (msg && msg.type === "KT_PLUS_GET_REQUEST") {
+    (async () => {
+      const rec = await _plusGetPending(String(msg.req || ""));
+      if (!rec || !rec.typedData || !rec.address) {
+        sendResponse({ ok: false });
+        return;
+      }
+      sendResponse({ ok: true, address: rec.address, typedData: rec.typedData });
+    })();
+    return true;
+  }
+  if (msg && msg.type === "KT_PLUS_WALLET") {
+    (async () => {
+      const reqId = String(msg.req || "");
+      const rec = await _plusGetPending(reqId);
+      const result = {
+        ok: !!msg.ok,
+        mode: msg.mode || rec && rec.mode || "connect",
+        address: msg.address || null,
+        signature: msg.signature || null,
+        chainId: msg.chainId || null,
+        test: !!msg.test,
+        error: msg.error || null,
+        ts: Date.now()
+      };
+      if (rec && rec.reg && result.mode === "sign") {
+        const windowId2 = rec.windowId;
+        await _plusClearPending(reqId);
+        await _plusCloseWindow(windowId2);
+        if (result.ok && result.signature) {
+          const out = await _plusDoRegister(rec.reg, result.signature);
+          const regResult = { ok: !!out.ok, kind: "plus_register", status: out.status, data: out.data, tag: rec.reg && rec.reg.tag || null, ts: Date.now() };
+          await _plusSetResult(reqId, regResult);
+          try {
+            await chrome.storage.session.set({ plusLastRegister: regResult });
+          } catch (e) {
+          }
+          if (out.status === 200) _plusAfterRegisterRefresh();
+        } else {
+          const regResult = { ok: false, kind: "plus_register", status: 0, data: { error: result.error || "sign_failed" }, ts: Date.now() };
+          await _plusSetResult(reqId, regResult);
+          try {
+            await chrome.storage.session.set({ plusLastRegister: regResult });
+          } catch (e) {
+          }
+        }
+        sendResponse({ ok: true });
+        return;
+      }
+      await _plusSetResult(reqId, result);
+      if (result.ok && result.mode === "connect" && result.address) {
+        await _plusSetWallet({ address: result.address, chainId: result.chainId, connectedAt: Date.now() });
+      }
+      if (result.ok && result.mode === "signtest" && result.address) {
+        const cur = await _plusGetWallet();
+        if (!cur) await _plusSetWallet({ address: result.address, chainId: result.chainId, connectedAt: Date.now() });
+      }
+      const windowId = rec && rec.windowId;
+      await _plusClearPending(reqId);
+      await _plusCloseWindow(windowId);
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+  sendResponse({ ok: false, error: "unknown_external_msg" });
+  return false;
+});
+chrome.windows.onRemoved.addListener((windowId) => {
+  (async () => {
+    for (const [reqId, rec] of plusPending.entries()) {
+      if (rec && rec.windowId === windowId) {
+        await _plusSetResult(reqId, { ok: false, mode: rec.mode, error: "window_closed", ts: Date.now() });
+        await _plusClearPending(reqId);
+      }
+    }
+  })();
 });

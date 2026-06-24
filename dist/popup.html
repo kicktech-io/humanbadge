@@ -508,6 +508,35 @@
       background: rgba(224,160,48,.15); color: #e0a030; border: 1px solid rgba(224,160,48,.25);
     }
   </style>
+
+<style> block into the existing <style> in <head>   ║
+     ║ (or inline as below). Then add initPlusWallet(); in popup.js (see        ║
+     ║ popup-plus.snippet.js).                                                  ║
+     ╚═══════════════════════════════════════════════════════════════════════╝ -->
+
+<style>
+  .hb-plus-bar{position:relative;border:1px solid rgba(83,74,183,.40);
+    background:radial-gradient(120% 140% at 50% 0%, rgba(83,74,183,.18), rgba(83,74,183,.05) 72%);
+    border-radius:12px;padding:14px 14px;margin:10px 12px;display:flex;
+    flex-direction:column;align-items:center;gap:8px;text-align:center;
+    box-shadow:0 0 0 1px rgba(83,74,183,.10), 0 6px 24px rgba(83,74,183,.22)}
+  body.light .hb-plus-bar{box-shadow:0 0 0 1px rgba(83,74,183,.12), 0 6px 22px rgba(99,102,241,.18)}
+  .hb-plus-head{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .hb-plus-title{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .hb-plus-hint{font-size:11px;color:var(--muted,#9a9aa3);line-height:1.45;
+    max-width:92%;margin:0 auto;text-align:center}
+  .hb-plus-status{font-size:11px;min-height:14px}
+  .hb-plus-status.ok{color:#4ade80}
+  .hb-plus-status.err{color:#ff6b6b}
+  .hb-plus-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+  .hb-plus-btn{font:inherit;font-size:12px;font-weight:600;border:0;border-radius:7px;
+    padding:7px 11px;cursor:pointer;background:#534AB7;color:#fff}
+  .hb-plus-btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.18);color:inherit}
+  .hb-plus-btn:disabled{opacity:.5;cursor:default}
+  .hb-plus-addr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    background:rgba(0,0,0,.25);border-radius:6px;padding:4px 8px}
+  body.light .hb-plus-addr{background:rgba(0,0,0,.06)}
+</style>
 </head>
 <body>
 
@@ -539,6 +568,21 @@
       <span class="hb-token-value" id="hbTokenValue">…</span>
     </div>
     <span class="hb-token-expires" id="hbTokenExpires">…</span>
+  </div>
+
+
+  
+  <div class="hb-plus-bar" id="hbPlusBar">
+    <div class="hb-plus-head">
+      <span class="hb-plus-title" id="hbPlusTitle">PLUS mode</span>
+      <span class="hb-plus-status" id="hbPlusStatus"></span>
+    </div>
+    <div class="hb-plus-hint" id="hbPlusHint"></div>
+    <span class="hb-plus-addr" id="hbPlusAddr" style="display:none">0x…</span>
+    <div class="hb-plus-row">
+      <button class="hb-plus-btn" id="hbPlusConnect">Connect wallet</button>
+      <button class="hb-plus-btn ghost" id="hbPlusTest" style="display:none">Test signature</button>
+    </div>
   </div>
 
   

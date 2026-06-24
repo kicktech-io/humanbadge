@@ -86,6 +86,27 @@ This is the workflow for someone publishing content they want to authenticate.
 
 > **HB does not run on smartphone apps** (see §7). If you want to register content while on a smartphone, open the relevant platform's website in a desktop/laptop Chromium browser with HB installed, log in there, and use the web version to register.
 
+### HB PLUS — verified-issuer registration (beta)
+
+HB PLUS is an optional sub-tier for **registered Issuers** and an MVP bridge toward KTOR Premium. Instead of (or in addition to) the account-level proof above, an Issuer cryptographically signs authorship with their wallet, and the content then displays under the Issuer's **organization tag** (e.g. `👤 FAPL TEST`) rather than the generic 👤 HUMAN badge. Editing the content still invalidates the badge, exactly as in regular HB.
+
+**Who it's for:** an Issuer enrolled in the on-chain issuer registry whose legal name begins with an organization tag in brackets (e.g. `[FAPL TEST] …`). Regular publishers and all readers need nothing new — readers simply see the org tag on signed content.
+
+**Issuer step-by-step (text content during beta):**
+
+1. **Connect a wallet** — in the popup's PLUS bar, click *Connect wallet*. A KickTech connector page opens in a normal browser window; approve the connection in your wallet. The popup then shows the connected Issuer address.
+2. **Publish + Register as usual** (steps 4–6 above). With a wallet connected and a text entry selected, Register switches into PLUS mode automatically.
+3. **Pass the anti-bot check** — the normal Turnstile step runs first (issues a short-lived HART).
+4. **Sign in your wallet** — the connector prompts for an EIP-712 signature over the registration. If your wallet isn't on Base Sepolia, it first asks to switch/add that network (beta runs on Base Sepolia). Approve the signature.
+5. **Done** — the backend re-verifies the signature server-side against the issuer registry, derives your org tag, and registers the asset under `[HUMAN] [YOUR TAG] …`. The popup shows the result; after the snapshot refresh, readers see your org tag on the content.
+
+**What PLUS is — and is not.** PLUS is *limited* issuer verification: cryptographic proof that the signer controls a wallet enrolled as an Issuer. It is the beta MVP of the issuer layer — **not** the full KTOR Premium offering (institutional vetting, image/signature-block registration, editorial workflows, SLAs), which remains separate (§9, §12). What leaves your browser in PLUS mode is covered in §10; the privacy handling of the signature and wallet address is in [PRIVACY.md](../PRIVACY.md) §9.2b and §10.2a.
+
+**Notes:**
+
+- PLUS currently applies to **text** entries (the exact-content SHA-256 is computed from the canonical text). Image/signature-block attestation stays a KTOR/KTOOR feature (§12).
+- The single signature authorizes one registration; the wallet connection persists until you click *Disconnect*.
+
 ---
 
 ## 4. Verification flow (reader workflow)
@@ -268,6 +289,8 @@ HB is the lightweight, popular-use tier of KickTech's origin-registry family. Th
 - **No signature/footer-block hashing.** HB does not register or check structured signature blocks (e.g., an institutional email footer with letterhead and contact details).
 - **No issuer authentication for institutional accounts.** HB does not have a process where institutions (banks, government agencies, news organizations) can prove they are who they claim to be.
 
+> **HB PLUS (beta) is the one nuance here.** As an optional sub-tier (see §3), a *registered Issuer* can sign content with their wallet, and it then displays under their organization tag. This is a **limited** form of issuer verification — proof of control over an enrolled Issuer wallet — and an MVP bridge toward Premium. It does **not** replace full KTOR Premium vetting: PLUS does not vet that the organization is who it claims to be in a legal/institutional sense, and (like base HB) it does not do image-content or signature-block hashing. For institutional-grade authentication, §12 still applies.
+
 ### Implications — and why we deliberately keep HB this way
 
 - HB is excellent for **ordinary social-media and messenger use**. Your friends, followers, and contacts trust the 👤 badge on your posts as a signal that the post is genuinely yours, on your account, unedited.
@@ -301,6 +324,8 @@ Stored in your browser, never transmitted:
 | Outbound — register | Only when you click "Register" in the popup | A hash of the content + your token + your publisher-channel context (either a non-personal identifier — group / conversation / organization / provider — or, for person-publication surfaces, a keyed HMAC of your author handle from which the handle cannot be recovered; see PRIVACY.md §10.2) | To create the on-chain registration |
 | Outbound — verify-HMAC | Only on person-publication surfaces with a registered HMAC marker, after the content hash has already matched | The candidate author handle visible in the page URL | To check whether the page's author matches the registration. Sent in the request body only (never URL/query) over TLS; the endpoint does not log or store the handle and returns only a yes/no answer |
 | Outbound — health | Every 60 seconds | A heartbeat to the gateway | To detect service outages and show a status indicator |
+| Outbound — PLUS connect/sign | Only when an Issuer connects a wallet and signs (the connector page, on explicit action) | The wallet connection, then an EIP-712 signature over the registration | To obtain the Issuer's cryptographic authorization (re-verified server-side) |
+| Outbound — PLUS register | Only on Issuer registration, with the normal register call | Additionally: the Issuer wallet address, the EIP-712 signature, a single-use nonce, and a SHA-256 of the content (a one-way hash, never the text) | To register the verified-issuer attestation under the org tag; see PRIVACY.md §9.2b, §10.2a |
 
 ### What does NOT leave your browser
 
@@ -390,8 +415,12 @@ HB and the full KTOR ecosystem run side by side. A user with both extensions ins
 |---|---|
 | **KT-token** | A short authentication token of the form `KT-XXXXXX`, derived from a per-installation seed and the current 10-minute time window. Rotates automatically. |
 | **KTOR** | KickTech Origin Registry — the umbrella family of services for content authenticity, comprising HB, KTOR Premium, and KTOOR. |
-| **HB** | HumanBadge, this extension. The lightweight, popular-use tier of KTOR. No identity verification of registrants; text hashing only. |
-| **KTOR Premium** | The full-featured institutional tier of KTOR. Includes verified-issuer authentication, image-content and signature-block hash registration, organizational workflows, SLAs, integration support. For companies, public institutions, and government agencies. Contractual. |
+| **HB** | HumanBadge, this extension. The lightweight, popular-use tier of KTOR. Base HB has no identity verification of registrants and does text hashing only; the optional **HB PLUS** sub-tier adds limited verified-issuer signing (see below). |
+| **HB PLUS** | An optional beta sub-tier of HB and an MVP bridge toward KTOR Premium. A registered Issuer signs authorship of exact content with their wallet (EIP-712), the backend re-verifies it server-side against the issuer registry, and the content displays under the Issuer's organization tag (`[HUMAN] [TAG] …`). Limited issuer verification (control of an enrolled wallet) — not the full Premium vetting. Text-only during beta. |
+| **Issuer** | An entity enrolled in the on-chain issuer registry. For HB PLUS, an Issuer whose legal name begins with a bracketed organization tag (e.g. `[FAPL TEST] …`) can sign content; the bracketed token becomes the on-chain org tag. |
+| **EIP-712** | A standard for signing structured (typed) data with an Ethereum-compatible wallet. HB PLUS uses it so an Issuer signs the exact registration details, which the backend verifies by recovering the signer address. |
+| **PLUS attestation** | The Issuer's EIP-712 signature plus the signed message, stored off-chain as durable evidence that the Issuer authorized the exact content; keyed by the content's SimHash marker. Erasable on request (PRIVACY.md §9.2b). |
+| **KTOR Premium** | The full-featured institutional tier of KTOR. Includes the complete verified-issuer authentication that HB PLUS only previews, plus image-content and signature-block hash registration, organizational workflows, SLAs, integration support. For companies, public institutions, and government agencies. Contractual. |
 | **KTOOR** | KickTech Origin Open Registry. A subset of KTOR offered pro bono in narrow scope to selected large state institutions, banks, and critical-infrastructure operators by KickTech invitation, for testing protection use-cases against fraud passing through existing state-run reporting systems. |
 | **Issuer authentication** | A process (specific to KTOR Premium and KTOOR, not present in HB) where institutional registrants prove verified identity before their registrations carry the institutional-trust signal. |
 | **Hash** | A one-way cryptographic fingerprint. Two identical inputs produce the same hash; any change produces a completely different hash. Cannot be reversed to reconstruct the original. |

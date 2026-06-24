@@ -1,7 +1,14 @@
 # KickTech HumanBadge — Privacy Policy
 
-**Effective date:** 8th June 2026
-**Version:** 1.1
+**Effective date:** 24th June 2026
+**Version:** 1.2
+
+> **What changed in 1.2 (24 June 2026):** Adds **HB PLUS** (beta) — an optional
+> verified-issuer layer where a registered Issuer signs content with their wallet.
+> This introduces, for PLUS registrations only, an Issuer wallet address, an
+> EIP-712 signature retained off-chain as a durable attestation, a single-use
+> nonce, and a content SHA-256 written on-chain. See §3.2(b), §7, §8, §9.2b and
+> §10.2a. No change to regular (non-PLUS) HB processing or to your existing rights.
 
 > **What changed in 1.1 (8 June 2026):** Author-handle HMAC keys (`K`) now carry
 > a sliding 30-day retention (refreshed on each verification, then auto-deleted)
@@ -62,7 +69,9 @@ b) **Registration requests** — when you click "Register" in the popup, HB send
   - a **per-installation session identifier** (`sessionId`): a UUID generated locally in your browser on first use and stored in your browser's local extension storage. It is transmitted with each registration and is used **solely for operational integrity** — binding the anti-bot challenge token (HART) to your installation so a stolen challenge cannot be reused, and per-installation rate-limiting to prevent abuse. It is **not linked to any personal data** we hold and is not used for advertising, profiling, or cross-site tracking. You can reset it at any time by clearing the extension's local storage (see §3.3);
   - optional metadata where applicable (e.g. a display name or author-domain hint resolved from the page, and the HART anti-bot token).
 
-  Of these fields, only the author identifier is personal data, and it never reaches the chain in recoverable form (§10.2). The `sessionId` is a pseudonymous operational identifier, disclosed here for completeness and transparency.
+  **HB PLUS (verified-issuer) registrations** additionally include: the **Issuer wallet address** (a public on-chain identifier of an enrolled Issuer); an **EIP-712 signature** over the registration; a **single-use nonce** (anti-replay); and a **SHA-256 of the canonical content** (a one-way hash — never the content text). The signature and the signed message are retained off-chain as a durable **attestation** (see §5, §7, §10.2a); the content SHA-256 is also written on-chain in the asset's metadata. PLUS applies only when an Issuer deliberately connects a wallet and signs; regular HB registrations carry none of these fields.
+
+  Of these fields, the author identifier is personal data and never reaches the chain in recoverable form (§10.2); the Issuer wallet address (PLUS only) is a public on-chain identifier of an enrolled Issuer, processed for the Issuer's own deliberate authentication act (§9.2b, §10.2a). The `sessionId` is a pseudonymous operational identifier, disclosed here for completeness and transparency.
 
 c) **Health-check heartbeats** — the extension sends a periodic heartbeat to the Backend to detect service outages and display a status indicator. No content data is transmitted in the heartbeat.
 
@@ -95,7 +104,7 @@ We use the following third parties as data processors:
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | **Vercel Inc.**                                        | Hosts the Backend application; provides network-edge rate-limiting (Vercel Firewall)   | Hashes (application level); IP addresses (edge level, not retained beyond rate-limit window; not passed to the application) | USA (with EU regions where available) |
 | **Cloudflare, Inc.**                                   | DNS resolution for our domains; Turnstile (privacy-respecting bot-detection challenge) | Standard DNS queries; Turnstile challenge tokens. Payload data does not pass through Cloudflare beyond DNS                  | USA / global                          |
-| **Upstash Inc.**                                       | Rate-limiting Redis backend (counters keyed by hashed identifiers); server-side store for per-registration author-handle HMAC keys (§9.1, §10.2) | Short-lived rate-limit counters (no personal data); random HMAC keys `K` (not handles) — the keys whose deletion cryptographically erases on-chain handle markers | USA / EU regions                      |
+| **Upstash Inc.**                                       | Rate-limiting Redis backend (counters keyed by hashed identifiers); server-side store for per-registration author-handle HMAC keys (§9.1, §10.2); HB PLUS single-use nonces and PLUS attestations (§10.2a) | Short-lived rate-limit counters (no personal data); random HMAC keys `K` (not handles) — the keys whose deletion cryptographically erases on-chain handle markers; HB PLUS single-use nonces (short-lived) and PLUS attestations (an Issuer's EIP-712 signature + signed message, retained for the life of the registration) | USA / EU regions                      |
 | **Base / Coinbase Technologies / Optimism Collective** | Public blockchain (Base Sepolia during beta, Base mainnet in production)               | Content hashes, publishing-channel identifiers, timestamps — written to a public, immutable ledger                          | Global (public blockchain)            |
 
 A Data Processing Agreement under GDPR Article 28 is in place with each processor where required. The operational register of these sub-processor DPAs — including links to each vendor's standard DPA terms, signature status, and applicable international-transfer mechanism — is maintained at [`docs/SUB-PROCESSORS.md`](docs/SUB-PROCESSORS.md). We may add or change sub-processors over time; material changes will be reflected in updates to this Privacy Policy.
@@ -116,6 +125,8 @@ Some processors listed in §5 are based in the United States or operate globally
 | Verify-HMAC candidate handle             | Not logged or stored; used in memory for the comparison only (§10.2) |
 | Network-edge rate-limit counters         | Up to 1 hour (the longest rate-limit window)           |
 | Author-handle HMAC keys (`K`)            | **Sliding 30 days**, refreshed on each successful verification; auto-deleted 30 days after the last verification, or immediately on erasure request (§9.2a). Deleting `K` cryptographically erases the on-chain marker (§10.2) |
+| HB PLUS single-use nonce                 | Single-use; short TTL (≤ 15 min), consumed on first use (anti-replay)  |
+| HB PLUS attestation (Issuer signature + signed message) | Retained for the life of the on-chain registration as evidence of issuer authorization; deleted on erasure request (§9.2b) |
 | Registration requests (on-chain)         | **Permanent** — written to a public blockchain; see §8 |
 | Local browser data (seed, prefs, cache)  | Until you uninstall HB or clear your browser data      |
 | Service logs (anonymized, no IP)         | 90 days for operational and security troubleshooting |
@@ -135,6 +146,8 @@ The data written on-chain consists of:
 - A publication pattern that identifies the scope of publication. For group, conversation, organization, and provider surfaces this is a non-personal identifier (a conversation ID, a company slug, a provider domain). For person-publication surfaces (where anti-spoofing must reference the author) the pattern contains a **keyed HMAC of the author handle** (`hmac.<h>`), **never the handle in clear** — see §10.2.
 - A timestamp.
 - The KickTech transaction signature.
+
+For **HB PLUS** registrations the same entry additionally carries, in the human-readable asset label, the Issuer's **organization tag** (derived from the Issuer's enrolled `legalName` — an organizational identifier, not a natural person's name; see §10.2a), and, in the asset metadata, a **SHA-256 of the content** (a one-way hash, not the content itself; see §10.1). The Issuer's wallet address is **not** added to the asset by PLUS — it is already a public entry in the issuer registry by virtue of Issuer enrollment.
 
 We do not write any directly identifying personal data to the chain in clear — no names, email addresses, IPs, plaintext handles, or profile URLs. Where an author handle must be referenced for anti-spoofing, only its keyed HMAC is written; the handle cannot be recovered from it without the server-side key.
 
@@ -161,6 +174,8 @@ Everything else processed by HB is either:
 - On the user's own device under the user's direct control (see §3.3), in which case KickTech is not the data holder and has no GDPR obligations toward that data.
 
 The per-installation `sessionId` (§3.2(b)) is a pseudonymous operational identifier — a locally-generated UUID used for anti-bot challenge binding and per-installation rate-limiting. On its own a random UUID does not identify a natural person, so it is not personal data under Art. 4(1); we disclose and document it here for transparency, and you can reset it at any time by clearing local storage.
+
+For **HB PLUS** (the optional verified-issuer layer), an Issuer's **wallet address** and the off-chain **attestation** of their signature are processed when an Issuer signs content. A wallet address is a public on-chain identifier; where the Issuer is a natural person it may constitute personal data. This category, and the rights attaching to it, are addressed in §9.2b.
 
 ### 9.2 Each GDPR right, in the concrete context of IP-at-edge
 
@@ -199,6 +214,22 @@ These rights concern the second category in §9.1: an author handle processed fo
 - **Right to object (Art. 21)** — You may object to the anti-spoofing processing of your handle; the remedy is key erasure (Art. 17), after which no on-chain marker referencing you remains recoverable.
 
 - **Storage limitation (Art. 5(1)(e)) — automatic minimization.** Beyond on-request erasure, each key `K` carries a **sliding 30-day time-to-live**: it is automatically deleted 30 days after the last successful verification, and every verification refreshes the window. This is a deliberate minimization choice grounded in how the platforms are actually used: on social and messaging surfaces, human readers overwhelmingly engage with current content, and older items are rarely revisited by people (automated revisits, e.g. background screening, are not the audience the badge serves). A registration that is still being viewed is therefore re-verified well within 30 days and its key persists for as long as it is in use; a key that nobody verifies for 30 days — including the superseded key left behind when an author edits and re-registers content — is deleted automatically. The accepted trade-off is that an asset which no human views for 30 days will need re-registration to restore its badge. The net effect is that recoverable author-handle data is retained only while it is actively serving its purpose, and abandoned keys are swept without any additional tracking of who registered what.
+
+### 9.2b Each GDPR right, in the concrete context of the HB PLUS Issuer wallet
+
+HB PLUS involves a registered **Issuer** signing content with their wallet (§3.2(b), §10.2a). Two PLUS-specific items are relevant here: the **Issuer wallet address** — a public, on-chain identifier already recorded in the public issuer registry as part of Issuer enrollment, which where the Issuer is a natural person may be personal data — and the **PLUS attestation**, the Issuer's EIP-712 signature and signed message stored off-chain as durable evidence that the Issuer authorized the exact content.
+
+- **Right of access (Art. 15)** — On request we will confirm what PLUS attestations we hold that reference a given Issuer wallet, and explain the processing.
+
+- **Right to rectification (Art. 16)** — If a PLUS registration bound the wrong content or Issuer, the remedy is erasure of that attestation (below) and, if desired, a fresh signed registration. The on-chain asset cannot be edited in place (immutable ledger).
+
+- **Right to erasure (Art. 17)** — **Exercisable.** On request we delete the off-chain PLUS attestation(s) for the registration, after which no stored signature referencing the Issuer remains. The on-chain asset then retains only its organizational tag and one-way content hashes (SimHash + SHA-256), neither of which is recoverable personal data (§10.1, §10.2a). The Issuer wallet address itself is a public registry entry created by Issuer enrollment, not by the PLUS registration, and is governed by the Issuer-enrollment relationship.
+
+- **Right to restriction (Art. 18)** — Pending resolution of a dispute, verification of a PLUS marker can be suspended (no PLUS badge served) without deleting the attestation, then erased or restored as the matter is resolved.
+
+- **Right to object (Art. 21)** — You may object to the PLUS processing of your authorization; the remedy is attestation erasure (Art. 17).
+
+- **Scope note.** The act of *becoming* a registered Issuer (enrollment and any vetting) is a separate relationship that may be governed by its own terms; this policy covers the PLUS registration action performed through HB. Issuers act in an **organizational capacity**, and the organization tag written on-chain is an organizational identifier, not a natural person's name (§10.2a).
 
 ### 9.3 Rights vis-à-vis Vercel as sub-processor
 
@@ -287,6 +318,23 @@ Before this design, KickTech avoided writing handles at all and accepted weaker 
 | Generic web text | content-hash only (no author pattern) | No |
 
 Only the first three rows reference a natural person's handle; only there does the keyed-HMAC mechanism (and the registration-time notice) apply. All other surfaces carry non-personal identifiers and need no HMAC.
+
+### 10.2a HB PLUS: what the verified-issuer layer writes and stores
+
+HB PLUS is an optional sub-tier in which a registered **Issuer** cryptographically signs authorship of exact content. Its data handling is deliberately aligned with the minimization principles above.
+
+**Re-verified server-side, not trusted from the client.** The Issuer's wallet produces an EIP-712 signature in the browser; the only authority is the Backend's server-side signature recovery and check against the on-chain issuer registry. The client channel carries a result, not trust.
+
+**What PLUS writes on-chain** (in addition to the regular content hash, timestamp and signature of §8):
+
+- the Issuer's **organization tag**, derived from the Issuer's enrolled `legalName` and carried inside the human-readable asset label (e.g. `[HUMAN] [FAPL TEST] …`). This is an **organizational identifier** — the same category as the company slug in §10.2 — not a natural person's name;
+- a **SHA-256 of the canonical content**, in the asset metadata. Like the SimHash, this is a one-way, preimage-resistant hash (§10.1) — it is not personal data and does not reveal the content.
+
+The Issuer **wallet address is not written by PLUS**: the wallet↔issuer mapping already exists as a public entry in the issuer registry, created when the Issuer was enrolled.
+
+**What PLUS stores off-chain.** The Issuer's EIP-712 **signature and signed message** are kept as a durable **attestation**, keyed by the content's SimHash marker, so the authorization can be independently re-verified later. The signed message contains the Issuer wallet address and the content hashes — no content text. The attestation is held for the life of the registration and is deleted on an erasure request (§9.2b); deleting it leaves on-chain only the organizational tag and one-way hashes, none of which is recoverable personal data.
+
+**Still the user's own content, still explicit.** As with regular HB (§10.3), PLUS registers only the Issuer's own content, transmits only hashes and minimized metadata, and requires an explicit per-registration action — here, a deliberate wallet signature.
 
 ### 10.3 Why writing hashes to the chain does not violate platform terms of service
 
