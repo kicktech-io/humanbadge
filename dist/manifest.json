@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Human Badge by KickTech",
-  "version": "0.7.0",
+  "version": "0.7.2",
   "description": "Active proof of authorship for what you publish online. Attestation on Base Sepolia — editing invalidates the badge.",
   "permissions": [
     "storage",
