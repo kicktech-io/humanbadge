@@ -2041,7 +2041,7 @@ function processWhatsAppBubble(el) {
   const preText = preEl?.getAttribute("data-pre-plain-text") || "";
   const senderMatch = preText.match(/\]\s*([^:]+):/);
   const sender = senderMatch?.[1]?.trim() || "";
-  const keyParts = [groupId, chatName, msgId, rawText].filter(Boolean);
+  const keyParts = [msgId, rawText].filter(Boolean);
   const key = keyParts.join(":");
   const hash = simHash(key);
   if (!hash) return;
@@ -2057,8 +2057,10 @@ function processWhatsAppBubble(el) {
       source: "WHATSAPP-TEXT-SIMHASH",
       tag: "TEXT",
       alt: rawText.slice(0, 200),
-      // Diagnostics only — viewer-dependent, never part of the key (0.7.2).
+      // Diagnostics only — both viewer-dependent, never part of the key
+      // (sender dropped in 0.7.2, chatName in 0.7.3).
       senderMeta: sender || null,
+      chatNameMeta: chatName || null,
       inHeader: false,
       position: { top: 0, left: 0 },
       ts: Date.now()
